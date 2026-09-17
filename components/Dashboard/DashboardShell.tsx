@@ -65,25 +65,38 @@ export default function DashboardShell({
   isAdmin: boolean;
 }) {
   const [section, setSection] = useState<Section>("overview");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [tableKey, setTableKey] = useState(0);
   const unlocked = isPaid || isAdmin;
 
   const hero = HERO_CONTENT[section];
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
-      <Sidebar section={section} onChange={setSection} isPaid={isPaid} isAdmin={isAdmin} />
+    <div className="flex min-h-screen bg-slate-50 overflow-x-hidden">
+      <Sidebar
+        section={section}
+        onChange={setSection}
+        isPaid={isPaid}
+        isAdmin={isAdmin}
+        mobileOpen={mobileMenuOpen}
+        onClose={() => setMobileMenuOpen(false)}
+      />
 
-      <div className="flex-1 flex flex-col">
-        <Topbar email={email} isPaid={isPaid} onOpenRequests={() => setSection("requests")} />
+      <div className="flex-1 flex flex-col min-w-0">
+        <Topbar
+          email={email}
+          isPaid={isPaid}
+          onOpenRequests={() => setSection("requests")}
+          onToggleMobileMenu={() => setMobileMenuOpen((o) => !o)}
+        />
 
-        <main className="flex-1 px-8 py-8 max-w-6xl w-full mx-auto">
+        <main className="flex-1 px-3 sm:px-6 lg:px-8 py-4 sm:py-8 max-w-6xl w-full mx-auto">
           {!unlocked ? (
-            <div className="animate-fadeIn text-center py-16">
+            <div className="animate-fadeIn text-center py-12 sm:py-16 px-4">
               <div className="w-16 h-16 rounded-full bg-amber-50 flex items-center justify-center mx-auto mb-4">
                 <Crown size={30} className="text-amber-500" />
               </div>
-              <h2 className="text-xl font-bold text-slate-900 mb-2">
+              <h2 className="text-lg sm:text-xl font-bold text-slate-900 mb-2">
                 Become a member to unlock your dashboard
               </h2>
               <p className="text-sm text-gray-500 max-w-sm mx-auto mb-6">
@@ -92,7 +105,7 @@ export default function DashboardShell({
               </p>
               <Link
                 href="/membership"
-                className="inline-flex bg-amber-600 text-white hover:bg-amber-700 px-6 py-2.5"
+                className="inline-flex bg-amber-600 text-white hover:bg-amber-700 px-6 py-2.5 rounded-lg text-sm font-medium"
               >
                 Become a Member
               </Link>
@@ -107,7 +120,7 @@ export default function DashboardShell({
               />
 
               <div
-                className={`bg-white border border-gray-200 rounded-xl shadow-sm p-6 ${
+                className={`bg-white border border-gray-200 rounded-xl shadow-sm p-4 sm:p-6 ${
                   section === "new-entry" ? "max-w-2xl mx-auto" : ""
                 }`}
               >

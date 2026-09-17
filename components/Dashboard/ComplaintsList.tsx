@@ -101,77 +101,136 @@ export default function ComplaintsList() {
       ) : filtered.length === 0 ? (
         <p className="text-sm text-gray-500 text-center py-8">No complaints match this filter.</p>
       ) : (
-        <div className="border border-gray-200 rounded-xl overflow-hidden">
-          <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead className="bg-slate-50 text-left text-slate-500 text-xs uppercase tracking-wide">
-              <tr>
-                <th className="px-4 py-3 font-semibold whitespace-nowrap">Photo</th>
-                <th className="px-4 py-3 font-semibold whitespace-nowrap">Category</th>
-                <th className="px-4 py-3 font-semibold">Description</th>
-                <th className="px-4 py-3 font-semibold whitespace-nowrap">Location</th>
-                <th className="px-4 py-3 font-semibold whitespace-nowrap">Contact</th>
-                <th className="px-4 py-3 font-semibold whitespace-nowrap">Status</th>
-                <th className="px-4 py-3 font-semibold whitespace-nowrap">Submitted</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {filtered.map((c, i) => (
-                <tr
-                  key={c.id}
-                  className="animate-fadeInUp hover:bg-slate-50 transition-colors"
-                  style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}
-                >
-                  <td className="px-4 py-3">
-                    {c.photo ? (
-                      <a href={c.photo} target="_blank" rel="noopener noreferrer">
-                        <img
-                          src={c.photo}
-                          alt={c.category}
-                          className="w-11 h-11 rounded-lg object-cover border border-gray-200 hover:opacity-80 transition-opacity"
-                        />
-                      </a>
-                    ) : (
-                      <div className="w-11 h-11 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-300">
-                        <ImageOff size={16} />
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap font-medium text-slate-900">{c.category}</td>
-                  <td className="px-4 py-3 max-w-xs text-slate-600">{c.description}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-slate-600">
-                    {c.city}, {c.taluka}, {c.district}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-slate-600">
-                    {c.citizenName && (
-                      <p className="text-slate-900 font-medium leading-tight">{c.citizenName}</p>
-                    )}
-                    <span className={c.citizenName ? "text-xs text-gray-400" : ""}>{c.contact}</span>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <select
-                      value={c.status}
-                      onChange={(e) => updateStatus(c.id, e.target.value as ComplaintStatus)}
-                      className={`text-xs font-medium rounded-full border px-2 py-1 ${STATUS_STYLES[c.status]}`}
-                    >
-                      <option value="Pending">Pending</option>
-                      <option value="In Progress">In Progress</option>
-                      <option value="Resolved">Resolved</option>
-                    </select>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-gray-400 text-xs">
-                    {new Date(c.submittedAt).toLocaleDateString(undefined, {
-                      day: "numeric",
-                      month: "short",
-                      year: "numeric",
-                    })}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <>
+          {/* Mobile Card View */}
+          <div className="md:hidden space-y-3">
+            {filtered.map((c, i) => (
+              <div
+                key={c.id}
+                className="bg-white border border-gray-200 rounded-xl p-3.5 shadow-sm space-y-3 animate-fadeInUp"
+                style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}
+              >
+                <div className="flex items-start gap-3">
+                  {c.photo ? (
+                    <a href={c.photo} target="_blank" rel="noopener noreferrer" className="shrink-0">
+                      <img
+                        src={c.photo}
+                        alt={c.category}
+                        className="w-14 h-14 rounded-lg object-cover border border-gray-200"
+                      />
+                    </a>
+                  ) : (
+                    <div className="w-14 h-14 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-300 shrink-0">
+                      <ImageOff size={18} />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-1">
+                      <p className="font-semibold text-slate-900 text-sm leading-tight truncate">
+                        {c.category}
+                      </p>
+                      <select
+                        value={c.status}
+                        onChange={(e) => updateStatus(c.id, e.target.value as ComplaintStatus)}
+                        className={`text-[11px] font-medium rounded-full border px-2 py-0.5 ${STATUS_STYLES[c.status]}`}
+                      >
+                        <option value="Pending">Pending</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Resolved">Resolved</option>
+                      </select>
+                    </div>
+                    <p className="text-xs text-gray-600 mt-1 line-clamp-2">{c.description}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between text-xs text-slate-500 bg-slate-50 rounded-lg px-2.5 py-1.5">
+                  <span>{c.city}, {c.taluka}</span>
+                  <span>{new Date(c.submittedAt).toLocaleDateString(undefined, { day: "numeric", month: "short" })}</span>
+                </div>
+
+                {(c.citizenName || c.contact) && (
+                  <div className="text-xs text-slate-600 pt-1 border-t border-gray-100 flex items-center justify-between">
+                    <span className="font-medium text-slate-900">{c.citizenName || "Citizen"}</span>
+                    <span className="text-gray-500">{c.contact}</span>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
-        </div>
+
+          {/* Desktop Table View */}
+          <div className="hidden md:block border border-gray-200 rounded-xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead className="bg-slate-50 text-left text-slate-500 text-xs uppercase tracking-wide">
+                  <tr>
+                    <th className="px-4 py-3 font-semibold whitespace-nowrap">Photo</th>
+                    <th className="px-4 py-3 font-semibold whitespace-nowrap">Category</th>
+                    <th className="px-4 py-3 font-semibold">Description</th>
+                    <th className="px-4 py-3 font-semibold whitespace-nowrap">Location</th>
+                    <th className="px-4 py-3 font-semibold whitespace-nowrap">Contact</th>
+                    <th className="px-4 py-3 font-semibold whitespace-nowrap">Status</th>
+                    <th className="px-4 py-3 font-semibold whitespace-nowrap">Submitted</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {filtered.map((c, i) => (
+                    <tr
+                      key={c.id}
+                      className="animate-fadeInUp hover:bg-slate-50 transition-colors"
+                      style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}
+                    >
+                      <td className="px-4 py-3">
+                        {c.photo ? (
+                          <a href={c.photo} target="_blank" rel="noopener noreferrer">
+                            <img
+                              src={c.photo}
+                              alt={c.category}
+                              className="w-11 h-11 rounded-lg object-cover border border-gray-200 hover:opacity-80 transition-opacity"
+                            />
+                          </a>
+                        ) : (
+                          <div className="w-11 h-11 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-300">
+                            <ImageOff size={16} />
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap font-medium text-slate-900">{c.category}</td>
+                      <td className="px-4 py-3 max-w-xs text-slate-600">{c.description}</td>
+                      <td className="px-4 py-3 whitespace-nowrap text-slate-600">
+                        {c.city}, {c.taluka}, {c.district}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-slate-600">
+                        {c.citizenName && (
+                          <p className="text-slate-900 font-medium leading-tight">{c.citizenName}</p>
+                        )}
+                        <span className={c.citizenName ? "text-xs text-gray-400" : ""}>{c.contact}</span>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <select
+                          value={c.status}
+                          onChange={(e) => updateStatus(c.id, e.target.value as ComplaintStatus)}
+                          className={`text-xs font-medium rounded-full border px-2 py-1 ${STATUS_STYLES[c.status]}`}
+                        >
+                          <option value="Pending">Pending</option>
+                          <option value="In Progress">In Progress</option>
+                          <option value="Resolved">Resolved</option>
+                        </select>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-gray-400 text-xs">
+                        {new Date(c.submittedAt).toLocaleDateString(undefined, {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

@@ -128,71 +128,130 @@ export default function ClientsTable() {
       ) : filtered.length === 0 ? (
         <p className="text-sm text-gray-500 text-center py-8">No clients match this filter.</p>
       ) : (
-        <div className="border border-gray-200 rounded-xl overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-slate-50 text-left text-slate-500 text-xs uppercase tracking-wide">
-                <tr>
-                  <th className="px-4 py-3 font-semibold">Client</th>
-                  <th className="px-4 py-3 font-semibold whitespace-nowrap">Gender / Age</th>
-                  <th className="px-4 py-3 font-semibold whitespace-nowrap">Contact</th>
-                  <th className="px-4 py-3 font-semibold whitespace-nowrap">Post</th>
-                  <th className="px-4 py-3 font-semibold whitespace-nowrap">Location</th>
-                  <th className="px-4 py-3 font-semibold whitespace-nowrap">Registered By</th>
-                  <th className="px-4 py-3 font-semibold whitespace-nowrap">Submitted</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {filtered.map((c, i) => (
-                  <tr
-                    key={c.id}
-                    className="animate-fadeInUp hover:bg-slate-50 transition-colors"
-                    style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}
-                  >
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <Avatar name={c.name} size="md" />
-                        <div>
-                          <p className="font-medium text-slate-900 leading-tight">{c.name}</p>
-                          <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
-                            <MapPin size={11} />
-                            {c.city}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-slate-600">
-                      {c.gender}, {c.age}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-slate-600">
-                      <ContactCell
-                        clientId={c.id}
-                        contact={c.contact}
-                        contactAccess={c.contactAccess}
-                        outgoingRequest={outgoing[c.id]}
-                        onRequested={handleRequested}
-                      />
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-slate-600">{c.post}</td>
-                    <td className="px-4 py-3 whitespace-nowrap text-slate-600">
-                      {c.district}, {c.taluka}
-                      <br />
-                      <span className="text-xs text-gray-400">Ward {c.ward}</span>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-slate-600">{c.submittedBy}</td>
-                    <td className="px-4 py-3 whitespace-nowrap text-gray-400 text-xs">
-                      {new Date(c.submittedAt).toLocaleDateString(undefined, {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                      })}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <>
+          {/* Mobile Card View */}
+          <div className="md:hidden space-y-3">
+            {filtered.map((c, i) => (
+              <div
+                key={c.id}
+                className="bg-white border border-gray-200 rounded-xl p-3.5 shadow-sm space-y-2.5 animate-fadeInUp"
+                style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2.5">
+                    <Avatar name={c.name} size="md" />
+                    <div>
+                      <p className="font-semibold text-slate-900 text-sm leading-tight">{c.name}</p>
+                      <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
+                        <MapPin size={11} />
+                        {c.city}, Ward {c.ward}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 font-medium whitespace-nowrap">
+                    {c.post}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 bg-slate-50 rounded-lg p-2">
+                  <div>
+                    <span className="text-gray-400 block text-[10px] uppercase">Gender / Age</span>
+                    <span className="font-medium">{c.gender}, {c.age} yrs</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-400 block text-[10px] uppercase">Taluka / District</span>
+                    <span className="font-medium">{c.taluka}, {c.district}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between gap-2 pt-1 border-t border-gray-100">
+                  <div className="text-xs">
+                    <ContactCell
+                      clientId={c.id}
+                      contact={c.contact}
+                      contactAccess={c.contactAccess}
+                      outgoingRequest={outgoing[c.id]}
+                      onRequested={handleRequested}
+                    />
+                  </div>
+                  <span className="text-[11px] text-gray-400">
+                    {new Date(c.submittedAt).toLocaleDateString(undefined, {
+                      day: "numeric",
+                      month: "short",
+                    })}
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
-        </div>
+
+          {/* Desktop Table View */}
+          <div className="hidden md:block border border-gray-200 rounded-xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead className="bg-slate-50 text-left text-slate-500 text-xs uppercase tracking-wide">
+                  <tr>
+                    <th className="px-4 py-3 font-semibold">Client</th>
+                    <th className="px-4 py-3 font-semibold whitespace-nowrap">Gender / Age</th>
+                    <th className="px-4 py-3 font-semibold whitespace-nowrap">Contact</th>
+                    <th className="px-4 py-3 font-semibold whitespace-nowrap">Post</th>
+                    <th className="px-4 py-3 font-semibold whitespace-nowrap">Location</th>
+                    <th className="px-4 py-3 font-semibold whitespace-nowrap">Registered By</th>
+                    <th className="px-4 py-3 font-semibold whitespace-nowrap">Submitted</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {filtered.map((c, i) => (
+                    <tr
+                      key={c.id}
+                      className="animate-fadeInUp hover:bg-slate-50 transition-colors"
+                      style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}
+                    >
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <Avatar name={c.name} size="md" />
+                          <div>
+                            <p className="font-medium text-slate-900 leading-tight">{c.name}</p>
+                            <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
+                              <MapPin size={11} />
+                              {c.city}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-slate-600">
+                        {c.gender}, {c.age}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-slate-600">
+                        <ContactCell
+                          clientId={c.id}
+                          contact={c.contact}
+                          contactAccess={c.contactAccess}
+                          outgoingRequest={outgoing[c.id]}
+                          onRequested={handleRequested}
+                        />
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-slate-600">{c.post}</td>
+                      <td className="px-4 py-3 whitespace-nowrap text-slate-600">
+                        {c.district}, {c.taluka}
+                        <br />
+                        <span className="text-xs text-gray-400">Ward {c.ward}</span>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-slate-600">{c.submittedBy}</td>
+                      <td className="px-4 py-3 whitespace-nowrap text-gray-400 text-xs">
+                        {new Date(c.submittedAt).toLocaleDateString(undefined, {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

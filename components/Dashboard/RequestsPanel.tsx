@@ -77,18 +77,19 @@ export default function RequestsPanel() {
               {pendingIncoming.map((r) => (
                 <div
                   key={r.id}
-                  className="flex items-center justify-between gap-3 border border-amber-200 bg-amber-50/50 rounded-lg px-4 py-3 animate-fadeInUp"
+                  className="flex items-start justify-between gap-3 border border-amber-200 bg-amber-50/50 rounded-lg px-3 sm:px-4 py-3 animate-fadeInUp"
                 >
-                  <div>
-                    <p className="text-sm text-slate-900">
-                      <span className="font-semibold">{r.requesterEmail}</span> wants to call{" "}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-slate-900 break-words">
+                      <span className="font-semibold">{r.requesterEmail}</span>{" "}
+                      <span className="text-slate-500">wants to call</span>{" "}
                       <span className="font-semibold">{r.clientName}</span>
                     </p>
                     <p className="text-xs text-gray-400 mt-0.5">
                       {new Date(r.createdAt).toLocaleString()}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-2 shrink-0 mt-0.5">
                     <button
                       onClick={() => respond(r.id, "deny")}
                       disabled={busyId === r.id}
@@ -111,14 +112,14 @@ export default function RequestsPanel() {
               {decidedIncoming.map((r) => (
                 <div
                   key={r.id}
-                  className="flex items-center justify-between gap-3 border border-gray-100 rounded-lg px-4 py-3"
+                  className="flex items-start justify-between gap-3 border border-gray-100 rounded-lg px-3 sm:px-4 py-3"
                 >
-                  <p className="text-sm text-slate-600">
+                  <p className="flex-1 min-w-0 text-sm text-slate-600 break-words">
                     <span className="font-medium">{r.requesterEmail}</span> asked about{" "}
                     <span className="font-medium">{r.clientName}</span>
                   </p>
                   <span
-                    className={`text-xs font-medium px-2.5 py-1 rounded-full ${STATUS_STYLES[r.status]}`}
+                    className={`shrink-0 text-xs font-medium px-2.5 py-1 rounded-full ${STATUS_STYLES[r.status]}`}
                   >
                     {r.status}
                   </span>
@@ -139,16 +140,17 @@ export default function RequestsPanel() {
             outgoing.map((r) => (
               <div
                 key={r.id}
-                className="flex items-center justify-between gap-3 border border-gray-100 rounded-lg px-4 py-3"
+                className="flex items-start justify-between gap-3 border border-gray-100 rounded-lg px-3 sm:px-4 py-3"
               >
-                <div>
-                  <p className="text-sm text-slate-900 font-medium">{r.clientName}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    Requested from {r.ownerEmail} • {new Date(r.createdAt).toLocaleDateString()}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-slate-900 font-medium truncate">{r.clientName}</p>
+                  <p className="text-xs text-gray-400 mt-0.5 break-words">
+                    Requested from {r.ownerEmail} •{" "}
+                    {new Date(r.createdAt).toLocaleDateString()}
                   </p>
                 </div>
                 <span
-                  className={`inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full ${STATUS_STYLES[r.status]}`}
+                  className={`shrink-0 inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full ${STATUS_STYLES[r.status]}`}
                 >
                   {r.status === "pending" && <Clock size={11} />}
                   {r.status === "approved" && <CheckCircle2 size={11} />}

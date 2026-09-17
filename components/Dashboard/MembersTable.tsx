@@ -61,7 +61,52 @@ export default function MembersTable() {
         {members.length === 1 ? "member" : "members"}
       </div>
 
-      <div className="border border-gray-200 rounded-xl overflow-hidden">
+      {/* Mobile Card View */}
+      <div className="md:hidden space-y-3">
+        {members.map((m, i) => (
+          <div
+            key={m.email}
+            className="bg-white border border-gray-200 rounded-xl p-3.5 shadow-sm space-y-2.5 animate-fadeInUp"
+            style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <Avatar name={m.email} size="md" />
+                <p className="font-semibold text-slate-900 text-sm truncate">{m.email}</p>
+              </div>
+              {m.isPaid ? (
+                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full whitespace-nowrap">
+                  <Crown size={10} />
+                  Paid
+                </span>
+              ) : (
+                <span className="text-[11px] font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full whitespace-nowrap">
+                  Unpaid
+                </span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 bg-slate-50 rounded-lg p-2">
+              <div>
+                <span className="text-gray-400 block text-[10px] uppercase">Phone</span>
+                <span className="font-medium">{m.phone || "—"}</span>
+              </div>
+              <div>
+                <span className="text-gray-400 block text-[10px] uppercase">Clients Registered</span>
+                <span className="font-medium text-violet-700 font-semibold">{m.clientCount}</span>
+              </div>
+            </div>
+
+            <div className="text-[11px] text-gray-400 flex items-center justify-between pt-1 border-t border-gray-100">
+              <span>Joined: {new Date(m.createdAt).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}</span>
+              {m.memberSince && <span>Paid: {new Date(m.memberSince).toLocaleDateString(undefined, { day: "numeric", month: "short" })}</span>}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop Table View */}
+      <div className="hidden md:block border border-gray-200 rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead className="bg-slate-50 text-left text-slate-500 text-xs uppercase tracking-wide">
