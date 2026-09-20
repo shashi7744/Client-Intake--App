@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { generateOtp, createEmailOtp } from "@/lib/db";
-import { resendConfigured, sendOtpEmail } from "@/lib/email";
+import { emailConfigured, sendOtpEmail } from "@/lib/email";
 
 // Uses Resend when configured (see lib/email.ts), otherwise falls back to a
 // mock OTP ("123456") for local development. Unlike MSG91, Resend only
@@ -18,7 +18,7 @@ export async function POST(req: Request) {
     );
   }
 
-  if (resendConfigured) {
+  if (emailConfigured) {
     const otp = generateOtp();
     await createEmailOtp(email, otp);
     const result = await sendOtpEmail(email, otp);

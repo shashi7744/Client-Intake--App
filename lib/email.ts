@@ -1,54 +1,68 @@
-// Thin wrapper around Resend's email API (https://resend.com/docs/api-reference/emails/send-email).
+// Gmail SMTP email sender using Nodemailer.
 //
-// Unlike MSG91, Resend only sends the email - it has no concept of an OTP.
-// The actual code generation, storage, and expiry checking lives in
-// lib/db.ts (generateOtp / createEmailOtp / verifyEmailOtp).
+// Completely free — 500 emails/day (15,000/month) with any Gmail account.
+// No domain purchase needed. Works with any recipient email address.
 //
 // Setup:
-// 1. Create a free account at https://resend.com (3,000 emails/month free,
-//    no credit card required).
-// 2. Get an API key from the dashboard (API Keys section).
+// 1. Enable 2-Step Verification on your Gmail account.
+// 2. Go to https://myaccount.google.com/apppasswords → create an app password.
 // 3. Add to .env.local:
-//      RESEND_API_KEY=your_api_key
-//      RESEND_FROM_EMAIL=onboarding@resend.dev
-//    The onboarding@resend.dev address works immediately with no setup for
-//    testing. To send from your own domain (e.g. noreply@yourdomain.com),
-//    verify that domain in Resend's dashboard first, then use that address.
-// 4. That's it - citizen login automatically switches from mock OTP
-//    ("123456") to real emails once RESEND_API_KEY is set.
+//      GMAIL_USER=your_email@gmail.com
+//      GMAIL_APP_PASSWORD=xxxx xxxx xxxx xxxx
+// 4. That's it — OTP emails will be sent to any user for free.
+//
+// The actual OTP code generation, storage, and expiry checking lives in
+// lib/db.ts (generateOtp / createEmailOtp / verifyEmailOtp).
 
-const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
+import nodemailer from "nodemailer";
 
-export const resendConfigured = Boolean(RESEND_API_KEY);
+const GMAIL_USER = process.env.GMAIL_USER;
+const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD;
+
+export const emailConfigured = Boolean(GMAIL_USER && GMAIL_APP_PASSWORD);
+
+// Create a reusable transporter (connection is pooled automatically)
+const transporter = emailConfigured
+  ? nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: GMAIL_USER,
+        pass: GMAIL_APP_PASSWORD,
+      },
+    })
+  : null;
 
 export async function sendOtpEmail(
   email: string,
   otp: string
 ): Promise<{ success: boolean; message: string }> {
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${RESEND_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: RESEND_FROM_EMAIL,
+  if (!transporter) {
+    return { success: false, message: "Email not configured" };
+  }
+
+  try {
+    await transporter.sendMail({
+      from: `"Client & Complaint Registry" <${GMAIL_USER}>`,
       to: email,
       subject: "Your verification code",
       html:
-        `<p>Your OTP for <strong>Client &amp; Complaint Registry</strong> is:</p>` +
-        `<p style="font-size:28px;font-weight:bold;letter-spacing:4px;">${otp}</p>` +
-        `<p>This code is valid for 5 minutes. If you didn't request this, you can ignore this email.</p>`,
-    }),
-  });
+        `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;">` +
+        `<h2 style="color:#7c3aed;margin-bottom:16px;">Verification Code</h2>` +
+        `<p style="color:#334155;">Your OTP for <strong>Client & Complaint Registry</strong> is:</p>` +
+        `<p style="font-size:32px;font-weight:bold;letter-spacing:6px;color:#7c3aed;margin:24px 0;text-align:center;">${otp}</p>` +
+        `<p style="color:#64748b;font-size:14px;">This code is valid for <strong>5 minutes</strong>. If you didn't request this, you can safely ignore this email.</p>` +
+        `<hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0;"/>` +
+        `<p style="color:#94a3b8;font-size:12px;text-align:center;">Client & Complaint Registry App</p>` +
+        `</div>`,
+    });
 
-  if (res.ok) {
     return { success: true, message: "OTP sent to your email" };
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : "Unknown error";
+    console.error("Gmail SMTP error:", errMsg);
+    return {
+      success: false,
+      message: "Failed to send OTP email. Please try again.",
+    };
   }
-  const data = await res.json().catch(() => ({}));
-  return {
-    success: false,
-    message: data.message || "Failed to send OTP email. Please try again.",
-  };
 }

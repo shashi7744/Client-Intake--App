@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { findMemberByEmail, generateOtp, createEmailOtp } from "@/lib/db";
-import { resendConfigured, sendOtpEmail } from "@/lib/email";
+import { emailConfigured, sendOtpEmail } from "@/lib/email";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -20,7 +20,7 @@ export async function POST(req: Request) {
     );
   }
 
-  if (resendConfigured) {
+  if (emailConfigured) {
     const otp = generateOtp();
     await createEmailOtp(email, otp);
     const result = await sendOtpEmail(email, otp);

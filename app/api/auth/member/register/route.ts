@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { findMemberByEmail, createMember, verifyEmailOtp } from "@/lib/db";
-import { resendConfigured } from "@/lib/email";
+import { emailConfigured } from "@/lib/email";
 
 export async function POST(req: Request) {
   const { email, password, otp } = await req.json();
@@ -30,7 +30,7 @@ export async function POST(req: Request) {
       { status: 400 }
     );
   }
-  if (resendConfigured) {
+  if (emailConfigured) {
     const valid = await verifyEmailOtp(email, otp);
     if (!valid) {
       return NextResponse.json(
