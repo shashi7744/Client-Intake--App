@@ -34,10 +34,7 @@ export const clientSchema = z.object({
 export type ClientFormData = z.infer<typeof clientSchema>;
 
 export const complaintSchema = z.object({
-  category: z.enum(
-    ["Road", "Water Supply", "Electricity", "Garbage / Sanitation", "Street Light", "Other"],
-    { errorMap: () => ({ message: "Select a category" }) }
-  ),
+  category: z.string().optional().default("General"),
   description: z.string().min(10, "Please describe the issue in a bit more detail"),
   photo: z.string().optional(),
 

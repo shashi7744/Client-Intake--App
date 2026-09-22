@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS members (
   email         TEXT PRIMARY KEY,
   password      TEXT NOT NULL, -- TODO: bcrypt hash before going live
   phone         TEXT,
-  is_paid       BOOLEAN NOT NULL DEFAULT FALSE,
+  is_paid       BOOLEAN NOT NULL DEFAULT TRUE,
   role          TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('member', 'admin')),
   member_since  TIMESTAMPTZ,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -52,7 +52,7 @@ ALTER TABLE clients DROP COLUMN IF EXISTS aadhar_masked;
 
 CREATE TABLE IF NOT EXISTS complaints (
   id           TEXT PRIMARY KEY,
-  category     TEXT NOT NULL,
+  category     TEXT DEFAULT 'General',
   description  TEXT NOT NULL,
   photo        TEXT, -- data URL of an optional attached photo
   state        TEXT NOT NULL,

@@ -157,7 +157,7 @@ export default function MemberRegisterForm() {
         <ArrowRight size={16} />
       </button>
       <p className="text-xs text-gray-400 text-center">
-        You&apos;ll be able to unlock full member access with a one-time payment after signing up.
+        Instant access upon account creation.
       </p>
     </form>
   );

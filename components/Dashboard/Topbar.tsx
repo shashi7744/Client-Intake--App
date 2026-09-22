@@ -1,4 +1,4 @@
-import { Crown, Menu } from "lucide-react";
+import { Menu } from "lucide-react";
 import LogoutButton from "@/components/Login/LogoutButton";
 import Avatar from "@/components/shared/Avatar";
 import NotificationBell from "@/components/Dashboard/NotificationBell";
@@ -29,13 +29,7 @@ export default function Topbar({
       </div>
 
       <div className="flex items-center gap-2 sm:gap-4">
-        {isPaid && (
-          <span className="hidden sm:inline-flex items-center gap-1 text-xs font-medium bg-amber-50 text-amber-700 px-2.5 py-1 rounded-full">
-            <Crown size={12} />
-            Member
-          </span>
-        )}
-        {isPaid && <NotificationBell onOpenRequests={onOpenRequests} />}
+        <NotificationBell onOpenRequests={onOpenRequests} />
         <div className="flex items-center gap-2 text-sm text-slate-700 sm:pl-3 sm:border-l sm:border-gray-200">
           <Avatar name={email || "Member"} size="sm" />
           <span className="font-medium hidden md:inline-block max-w-[140px] lg:max-w-[200px] truncate">

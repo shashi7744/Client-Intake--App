@@ -9,12 +9,6 @@ export async function GET() {
     return NextResponse.json({ status: "error", message: "Not logged in" }, { status: 401 });
   }
   const isAdmin = member.role === "admin";
-  if (!isAdmin && !member.isPaid) {
-    return NextResponse.json(
-      { status: "error", message: "Membership required" },
-      { status: 403 }
-    );
-  }
 
   const clients = await getClients();
 
@@ -48,12 +42,6 @@ export async function POST(req: Request) {
   const member = await getCurrentMember();
   if (!member) {
     return NextResponse.json({ status: "error", message: "Not logged in" }, { status: 401 });
-  }
-  if (member.role !== "admin" && !member.isPaid) {
-    return NextResponse.json(
-      { status: "error", message: "Membership required to register clients" },
-      { status: 403 }
-    );
   }
 
   const body = await req.json();

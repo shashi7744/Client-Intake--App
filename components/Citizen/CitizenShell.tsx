@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ShieldCheck, AlertTriangle, ClipboardList } from "lucide-react";
 import LogoutButton from "@/components/Login/LogoutButton";
 import ComplaintForm from "@/components/Complaints/ComplaintForm";
@@ -10,6 +10,17 @@ type Tab = "file" | "mine";
 
 export default function CitizenShell({ email, name }: { email: string | null; name?: string | null }) {
   const [tab, setTab] = useState<Tab>("file");
+
+  useEffect(() => {
+    if (email) {
+      try {
+        localStorage.setItem("citizen_email", email);
+        localStorage.setItem("last_portal", "citizen");
+      } catch {
+        // ignore
+      }
+    }
+  }, [email]);
 
   return (
     <div className="min-h-screen bg-slate-50 overflow-x-hidden">

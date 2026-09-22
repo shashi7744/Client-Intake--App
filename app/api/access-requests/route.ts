@@ -6,8 +6,8 @@ import { getCurrentMember } from "@/lib/session";
 // Auto-approved instantly if the requester is the client's own owner.
 export async function POST(req: Request) {
   const member = await getCurrentMember();
-  if (!member || (!member.isPaid && member.role !== "admin")) {
-    return NextResponse.json({ status: "error", message: "Membership required" }, { status: 403 });
+  if (!member) {
+    return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
   }
 
   const { clientId } = await req.json().catch(() => ({}));
@@ -17,7 +17,7 @@ export async function POST(req: Request) {
   }
 
   // Owners always have access to their own clients - no approval needed.
-  if (client.submittedBy.toLowerCase() === member.email.toLowerCase()) {
+  if (client.submittedBy.toLowerCase() === member.email.toLowerCase() || member.role === "admin") {
     return NextResponse.json({ status: "approved", ownRecord: true });
   }
 
@@ -25,17 +25,22 @@ export async function POST(req: Request) {
   return NextResponse.json({ status: request.status, request });
 }
 
-// GET - returns the current member's incoming requests (people asking to see
-// their clients' numbers) and outgoing requests (their own requests' status).
+// GET - returns the current member's incoming requests and outgoing requests,
+// and if admin, returns all requests in the system.
 export async function GET() {
   const member = await getCurrentMember();
-  if (!member || (!member.isPaid && member.role !== "admin")) {
-    return NextResponse.json({ status: "error", message: "Membership required" }, { status: 403 });
+  if (!member) {
+    return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
   }
 
   const all = await getAccessRequests();
   const incoming = all.filter((r) => r.ownerEmail.toLowerCase() === member.email.toLowerCase());
   const outgoing = all.filter((r) => r.requesterEmail.toLowerCase() === member.email.toLowerCase());
 
-  return NextResponse.json({ status: "success", incoming, outgoing });
+  return NextResponse.json({
+    status: "success",
+    incoming,
+    outgoing,
+    allRequests: member.role === "admin" ? all : undefined,
+  });
 }

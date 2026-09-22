@@ -4,8 +4,8 @@ import { getCurrentMember } from "@/lib/session";
 
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   const member = await getCurrentMember();
-  if (!member || (!member.isPaid && member.role !== "admin")) {
-    return NextResponse.json({ status: "error", message: "Membership required" }, { status: 403 });
+  if (!member) {
+    return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });
   }
 
   const { action } = await req.json().catch(() => ({}));
@@ -13,7 +13,12 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     return NextResponse.json({ status: "error", message: "Invalid action" }, { status: 400 });
   }
 
-  const updated = await respondToAccessRequest(params.id, member.email, action === "approve");
+  const updated = await respondToAccessRequest(
+    params.id,
+    member.email,
+    action === "approve",
+    member.role === "admin"
+  );
   if (!updated) {
     return NextResponse.json(
       { status: "error", message: "Request not found or not yours to respond to" },

@@ -1,25 +1,32 @@
 "use client";
 
-import { UserPlus, Users, ShieldCheck, Lock, Crown, LayoutGrid, Bell, UserCog, ClipboardList, X } from "lucide-react";
-import Link from "next/link";
+import { UserPlus, Users, ShieldCheck, LayoutGrid, Bell, UserCog, ClipboardList, X } from "lucide-react";
 
-export type Section = "overview" | "new-entry" | "all-clients" | "requests" | "members" | "all-complaints";
+export type Section =
+  | "overview"
+  | "new-entry"
+  | "all-clients"
+  | "requests"
+  | "members"
+  | "all-complaints"
+  | "admin-requests";
 
 export default function Sidebar({
   section,
   onChange,
-  isPaid,
+  isPaid: _isPaid,
   isAdmin,
   mobileOpen = false,
   onClose,
 }: {
   section: Section;
   onChange: (s: Section) => void;
-  isPaid: boolean;
+  isPaid?: boolean;
   isAdmin: boolean;
   mobileOpen?: boolean;
   onClose?: () => void;
 }) {
+  // Regular member nav items (if admin, Requests is placed below All Complaints in the Admin section)
   const navItems: {
     id: Section;
     label: string;
@@ -28,7 +35,7 @@ export default function Sidebar({
     { id: "overview", label: "Overview", icon: <LayoutGrid size={18} /> },
     { id: "new-entry", label: "New Client Entry", icon: <UserPlus size={18} /> },
     { id: "all-clients", label: "All Clients", icon: <Users size={18} /> },
-    { id: "requests", label: "Requests", icon: <Bell size={18} /> },
+    ...(!isAdmin ? [{ id: "requests" as Section, label: "Requests", icon: <Bell size={18} /> }] : []),
   ];
 
   const adminItems: {
@@ -38,9 +45,8 @@ export default function Sidebar({
   }[] = [
     { id: "members", label: "Members", icon: <UserCog size={18} /> },
     { id: "all-complaints", label: "All Complaints", icon: <ClipboardList size={18} /> },
+    { id: "admin-requests", label: "Requests", icon: <Bell size={18} /> },
   ];
-
-  const unlocked = isPaid || isAdmin;
 
   const handleSelect = (id: Section) => {
     onChange(id);
@@ -49,21 +55,6 @@ export default function Sidebar({
 
   const renderItem = (item: { id: Section; label: string; icon: React.ReactNode }) => {
     const active = section === item.id;
-
-    if (!unlocked) {
-      return (
-        <Link
-          key={item.id}
-          href="/membership"
-          onClick={() => onClose?.()}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-left text-slate-500 hover:bg-slate-800 hover:text-slate-300 transition-all duration-200"
-        >
-          {item.icon}
-          <span className="flex-1">{item.label}</span>
-          <Lock size={14} />
-        </Link>
-      );
-    }
 
     return (
       <button
@@ -130,25 +121,6 @@ export default function Sidebar({
             </>
           )}
         </nav>
-
-        {!unlocked && (
-          <div className="mx-3 mb-3 p-3 rounded-lg bg-gradient-to-br from-amber-500/20 to-orange-600/20 border border-amber-500/30">
-            <div className="flex items-center gap-2 text-amber-400 text-sm font-semibold mb-1">
-              <Crown size={16} />
-              Not a member yet
-            </div>
-            <p className="text-xs text-slate-400 mb-2">
-              Unlock client entries and complaint records.
-            </p>
-            <Link
-              href="/membership"
-              onClick={() => onClose?.()}
-              className="block text-center text-xs font-medium bg-amber-600 text-white hover:bg-amber-700 rounded-md py-1.5"
-            >
-              Become a Member
-            </Link>
-          </div>
-        )}
 
         <div className="px-6 py-4 border-t border-slate-800 text-[11px] text-slate-500">
           © {new Date().getFullYear()} Client Registry

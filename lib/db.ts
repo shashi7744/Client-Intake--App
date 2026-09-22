@@ -60,8 +60,8 @@ export async function createMember(member: Member): Promise<void> {
     INSERT INTO members (email, password, phone, is_paid, role, member_since, created_at)
     VALUES (
       ${member.email}, ${member.password}, ${member.phone || null},
-      ${member.isPaid}, ${member.role || "member"},
-      ${member.memberSince || null}, ${member.createdAt}
+      TRUE, ${member.role || "member"},
+      now(), ${member.createdAt}
     )
   `;
 }
@@ -397,24 +397,34 @@ export async function requestClientAccess(
 export async function respondToAccessRequest(
   id: string,
   ownerEmail: string,
-  approve: boolean
+  approve: boolean,
+  isAdmin: boolean = false
 ): Promise<AccessRequest | null> {
   const sql = getSql();
-  const rows = await sql`
-    UPDATE access_requests
-    SET status = ${approve ? "approved" : "denied"}, responded_at = now()
-    WHERE id = ${id} AND lower(owner_email) = lower(${ownerEmail})
-    RETURNING *
-  `;
+  const rows = isAdmin
+    ? await sql`
+        UPDATE access_requests
+        SET status = ${approve ? "approved" : "denied"}, responded_at = now()
+        WHERE id = ${id}
+        RETURNING *
+      `
+    : await sql`
+        UPDATE access_requests
+        SET status = ${approve ? "approved" : "denied"}, responded_at = now()
+        WHERE id = ${id} AND lower(owner_email) = lower(${ownerEmail})
+        RETURNING *
+      `;
   return rows[0] ? rowToAccessRequest(rows[0]) : null;
 }
 
 // A member can see a client's phone number if they registered that client
-// themselves, or if the owning member has approved an access request.
+// themselves, if they are an admin, or if an access request was approved.
 export async function canSeeClientContact(
   client: ClientRecord,
   memberEmail: string
 ): Promise<boolean> {
+  const member = await findMemberByEmail(memberEmail);
+  if (member?.role === "admin") return true;
   if (client.submittedBy.toLowerCase() === memberEmail.toLowerCase()) return true;
   const request = await findAccessRequest(client.id, memberEmail);
   return request?.status === "approved";
