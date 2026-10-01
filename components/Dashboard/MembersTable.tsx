@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Inbox, Users, ChevronDown, ChevronUp, Phone, MapPin, Calendar, User } from "lucide-react";
 import Avatar from "@/components/shared/Avatar";
 import type { ClientRecord } from "@/lib/db";
+import HeadRoleControl, { HeadFields } from "@/components/Dashboard/HeadRoleControl";
 
 type AdminMember = {
   email: string;
@@ -12,9 +13,9 @@ type AdminMember = {
   createdAt: string;
   clientCount: number;
   clients: ClientRecord[];
-};
+} & HeadFields;
 
-export default function MembersTable() {
+export default function MembersTable({ currentEmail }: { currentEmail?: string | null }) {
   const [members, setMembers] = useState<AdminMember[] | null>(null);
   const [error, setError] = useState("");
   const [expandedMember, setExpandedMember] = useState<string | null>(null);
@@ -29,13 +30,66 @@ export default function MembersTable() {
       .catch(() => setError("Failed to load members"));
   }, []);
 
+  const toggleRole = async (m: AdminMember) => {
+    const makeAdmin = m.role !== "admin";
+    const msg = makeAdmin
+      ? `Give admin access to ${m.email}?`
+      : `Remove admin access from ${m.email}?`;
+    if (!confirm(msg)) return;
+    setError("");
+    const res = await fetch("/api/admin/set-role", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: m.email, role: makeAdmin ? "admin" : "member" }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      setMembers((prev) =>
+        prev ? prev.map((x) => (x.email === m.email ? { ...x, role: data.role } : x)) : prev
+      );
+    } else {
+      setError(data.message || "Could not update role");
+    }
+  };
+
+  const roleButton = (m: AdminMember) => {
+    const isSelf = !!currentEmail && m.email.toLowerCase() === currentEmail.toLowerCase();
+    if (isSelf) return <span className="text-[11px] text-gray-400">You</span>;
+    const isAdminRole = m.role === "admin";
+    return (
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          toggleRole(m);
+        }}
+        className={`text-xs font-medium px-2.5 py-1 rounded-lg border transition-colors whitespace-nowrap ${
+          isAdminRole
+            ? "text-red-600 border-red-200 hover:bg-red-50"
+            : "text-violet-700 border-violet-200 hover:bg-violet-50"
+        }`}
+      >
+        {isAdminRole ? "Remove Admin" : "Make Admin"}
+      </button>
+    );
+  };
+
+  const headControl = (m: AdminMember) => (
+    <HeadRoleControl
+      email={m.email}
+      value={{ headLevel: m.headLevel, headDistrict: m.headDistrict, headTaluka: m.headTaluka }}
+      onSaved={(v) =>
+        setMembers((prev) => (prev ? prev.map((x) => (x.email === m.email ? { ...x, ...v } : x)) : prev))
+      }
+    />
+  );
+
   const toggleExpand = (email: string) => {
     setExpandedMember((prev) => (prev === email ? null : email));
   };
 
-  if (error) return <p className="text-red-500 text-sm">{error}</p>;
-
   if (!members) {
+    if (error) return <p className="text-red-500 text-sm">{error}</p>;
     return (
       <div className="space-y-3">
         {[0, 1, 2].map((i) => (
@@ -61,6 +115,7 @@ export default function MembersTable() {
 
   return (
     <div>
+      {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
       <div className="flex items-center justify-between gap-2 text-sm text-slate-600 mb-4">
         <div className="flex items-center gap-2">
           <Users size={16} className="text-violet-600" />
@@ -99,7 +154,13 @@ export default function MembersTable() {
                 </button>
               </div>
 
+              <div className="pt-1 border-t border-gray-100">
+                <p className="text-[10px] uppercase text-gray-400 mb-1">Area role</p>
+                {headControl(m)}
+              </div>
+
               <div className="text-[11px] text-gray-400 pt-1 border-t border-gray-100 flex items-center justify-between">
+                {roleButton(m)}
                 <span>Joined: {new Date(m.createdAt).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}</span>
               </div>
 
@@ -166,6 +227,8 @@ export default function MembersTable() {
                 <th className="px-4 py-3 font-semibold whitespace-nowrap">Phone</th>
                 <th className="px-4 py-3 font-semibold whitespace-nowrap">Clients Registered</th>
                 <th className="px-4 py-3 font-semibold whitespace-nowrap">Joined</th>
+                <th className="px-4 py-3 font-semibold whitespace-nowrap">Access</th>
+                <th className="px-4 py-3 font-semibold whitespace-nowrap">Area Role</th>
                 <th className="px-4 py-3 font-semibold text-right">Details</th>
               </tr>
             </thead>
@@ -173,7 +236,7 @@ export default function MembersTable() {
               {members.map((m, i) => {
                 const isExpanded = expandedMember === m.email;
                 return (
-                  <tr key={m.email} className="contents">
+                  <Fragment key={m.email}>
                     <tr
                       onClick={() => toggleExpand(m.email)}
                       className={`cursor-pointer transition-colors ${
@@ -186,7 +249,7 @@ export default function MembersTable() {
                           <div>
                             <p className="font-semibold text-slate-900">{m.email}</p>
                             {m.role === "admin" && (
-                              <span className="text-[10px] uppercase font-bold text-violet-600 bg-violet-100 px-1.5 py-0.2 rounded">
+                              <span className="text-[10px] uppercase font-bold text-violet-600 bg-violet-100 px-1.5 py-0.5 rounded">
                                 Admin
                               </span>
                             )}
@@ -209,6 +272,8 @@ export default function MembersTable() {
                           year: "numeric",
                         })}
                       </td>
+                      <td className="px-4 py-3 whitespace-nowrap">{roleButton(m)}</td>
+                      <td className="px-4 py-3">{headControl(m)}</td>
                       <td className="px-4 py-3 whitespace-nowrap text-right">
                         <button
                           type="button"
@@ -227,7 +292,7 @@ export default function MembersTable() {
                     {/* Expanded Client Details Row */}
                     {isExpanded && (
                       <tr className="bg-slate-50/80">
-                        <td colSpan={5} className="px-6 py-4 border-t border-b border-violet-100">
+                        <td colSpan={7} className="px-6 py-4 border-t border-b border-violet-100">
                           <div className="space-y-3">
                             <div className="flex items-center justify-between">
                               <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
@@ -289,7 +354,7 @@ export default function MembersTable() {
                         </td>
                       </tr>
                     )}
-                  </tr>
+                  </Fragment>
                 );
               })}
             </tbody>

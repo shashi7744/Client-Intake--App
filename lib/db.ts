@@ -1,4 +1,5 @@
 import { neon } from "@neondatabase/serverless";
+import crypto from "crypto";
 
 // Real database via Neon (serverless Postgres). Every function here is now
 // async - see lib/schema.sql for the table definitions and
@@ -26,6 +27,9 @@ export type Member = {
   phone?: string;
   isPaid: boolean;
   role: MemberRole;
+  headLevel?: "district" | "taluka";
+  headDistrict?: string;
+  headTaluka?: string;
   memberSince?: string;
   createdAt: string;
 };
@@ -37,6 +41,9 @@ function rowToMember(row: any): Member {
     phone: row.phone || undefined,
     isPaid: row.is_paid,
     role: row.role,
+    headLevel: row.head_level || undefined,
+    headDistrict: row.head_district || undefined,
+    headTaluka: row.head_taluka || undefined,
     memberSince: row.member_since ? new Date(row.member_since).toISOString() : undefined,
     createdAt: new Date(row.created_at).toISOString(),
   };
@@ -87,11 +94,26 @@ export async function setMemberRole(email: string, role: MemberRole): Promise<Me
   return rows[0] ? rowToMember(rows[0]) : null;
 }
 
+export async function setMemberHead(
+  email: string,
+  level: "district" | "taluka" | null,
+  district: string | null,
+  taluka: string | null
+): Promise<void> {
+  const sql = getSql();
+  await sql`
+    UPDATE members
+    SET head_level = ${level}, head_district = ${level ? district : null}, head_taluka = ${level === "taluka" ? taluka : null}
+    WHERE lower(email) = lower(${email})
+  `;
+}
+
 // ---------- Citizens (email OTP only, no account setup, used to file complaints) ----------
 
 export type Citizen = {
   email: string;
   name?: string;
+  phone?: string;
   createdAt: string;
 };
 
@@ -102,6 +124,7 @@ export async function findCitizenByEmail(email: string): Promise<Citizen | undef
   return {
     email: rows[0].email,
     name: rows[0].name || undefined,
+    phone: rows[0].phone || undefined,
     createdAt: new Date(rows[0].created_at).toISOString(),
   };
 }
@@ -118,8 +141,14 @@ export async function findOrCreateCitizen(email: string): Promise<Citizen> {
   return {
     email: rows[0].email,
     name: rows[0].name || undefined,
+    phone: rows[0].phone || undefined,
     createdAt: new Date(rows[0].created_at).toISOString(),
   };
+}
+
+export async function setCitizenPhone(email: string, phone: string): Promise<void> {
+  const sql = getSql();
+  await sql`UPDATE citizens SET phone = ${phone} WHERE lower(email) = lower(${email})`;
 }
 
 export async function setCitizenName(email: string, name: string): Promise<void> {
@@ -177,6 +206,7 @@ export type ClientRecord = {
   ward: string;
   submittedBy: string; // member email
   submittedAt: string;
+  isProfile?: boolean; // true = this is the member's own profile record
 };
 
 function rowToClient(row: any): ClientRecord {
@@ -197,6 +227,7 @@ function rowToClient(row: any): ClientRecord {
     ward: row.ward,
     submittedBy: row.submitted_by,
     submittedAt: new Date(row.submitted_at).toISOString(),
+    isProfile: !!row.is_profile,
   };
 }
 
@@ -211,12 +242,12 @@ export async function saveClient(client: ClientRecord): Promise<void> {
   await sql`
     INSERT INTO clients (
       id, name, gender, dob, age, contact, reference, post, address,
-      state, district, taluka, city, ward, submitted_by, submitted_at
+      state, district, taluka, city, ward, submitted_by, submitted_at, is_profile
     ) VALUES (
       ${client.id}, ${client.name}, ${client.gender}, ${client.dob}, ${client.age},
       ${client.contact}, ${client.reference || null}, ${client.post}, ${client.address},
       ${client.state}, ${client.district}, ${client.taluka},
-      ${client.city}, ${client.ward}, ${client.submittedBy}, ${client.submittedAt}
+      ${client.city}, ${client.ward}, ${client.submittedBy}, ${client.submittedAt}, ${client.isProfile ?? false}
     )
   `;
 }
@@ -236,6 +267,7 @@ export type Complaint = {
   city: string;
   ward: string;
   contact: string; // citizen's email address
+  phone?: string; // citizen's mobile number, for admin to WhatsApp / call
   citizenName?: string; // looked up from citizens table, if they've set one
   status: ComplaintStatus;
   submittedAt: string;
@@ -254,6 +286,7 @@ function rowToComplaint(row: any): Complaint {
     city: row.city,
     ward: row.ward,
     contact: row.contact,
+    phone: row.phone || undefined,
     citizenName: row.citizen_name || undefined,
     status: row.status,
     submittedAt: new Date(row.submitted_at).toISOString(),
@@ -277,11 +310,11 @@ export async function saveComplaint(complaint: Complaint): Promise<void> {
   await sql`
     INSERT INTO complaints (
       id, category, description, photo, state, district, taluka, city, ward,
-      contact, status, submitted_at
+      contact, phone, status, submitted_at
     ) VALUES (
       ${complaint.id}, ${complaint.category}, ${complaint.description}, ${complaint.photo || null},
       ${complaint.state}, ${complaint.district}, ${complaint.taluka}, ${complaint.city},
-      ${complaint.ward}, ${complaint.contact}, ${complaint.status}, ${complaint.submittedAt}
+      ${complaint.ward}, ${complaint.contact}, ${complaint.phone || null}, ${complaint.status}, ${complaint.submittedAt}
     )
   `;
 }
@@ -428,4 +461,270 @@ export async function canSeeClientContact(
   if (client.submittedBy.toLowerCase() === memberEmail.toLowerCase()) return true;
   const request = await findAccessRequest(client.id, memberEmail);
   return request?.status === "approved";
+}
+
+
+// ---------- Profile check ----------
+export async function hasClientProfile(email: string): Promise<boolean> {
+  const sql = getSql();
+  const rows = await sql`SELECT 1 FROM clients WHERE lower(submitted_by) = lower(${email}) LIMIT 1`;
+  return rows.length > 0;
+}
+
+export async function countAdmins(): Promise<number> {
+  const sql = getSql();
+  const rows = await sql`SELECT count(*)::int AS n FROM members WHERE role = 'admin'`;
+  return rows[0].n;
+}
+
+// ---------- Citizen "remember this device" tokens ----------
+// Only a SHA-256 hash of a random token is stored; the raw token lives in an
+// httpOnly cookie. Identity is never taken from client-supplied data.
+function hashToken(raw: string): string {
+  return crypto.createHash("sha256").update(raw).digest("hex");
+}
+
+export async function createCitizenDeviceToken(email: string): Promise<string> {
+  const sql = getSql();
+  const raw = crypto.randomBytes(32).toString("hex");
+  await sql`
+    INSERT INTO citizen_devices (token_hash, citizen_email)
+    VALUES (${hashToken(raw)}, ${email.toLowerCase()})
+  `;
+  return raw;
+}
+
+export async function verifyCitizenDeviceToken(raw: string): Promise<Citizen | undefined> {
+  if (!raw) return undefined;
+  const sql = getSql();
+  const rows = await sql`
+    SELECT c.* FROM citizen_devices d
+    JOIN citizens c ON c.email = d.citizen_email
+    WHERE d.token_hash = ${hashToken(raw)} LIMIT 1
+  `;
+  if (!rows[0]) return undefined;
+  return {
+    email: rows[0].email,
+    name: rows[0].name || undefined,
+    phone: rows[0].phone || undefined,
+    createdAt: new Date(rows[0].created_at).toISOString(),
+  };
+}
+
+export async function deleteCitizenDeviceToken(raw: string): Promise<void> {
+  if (!raw) return;
+  const sql = getSql();
+  await sql`DELETE FROM citizen_devices WHERE token_hash = ${hashToken(raw)}`;
+}
+
+// ---------- Announcements (posted by admins, shown to all members) ----------
+export type Announcement = {
+  id: string;
+  title: string;
+  description: string;
+  link?: string;
+  photo?: string;
+  createdBy: string;
+  createdAt: string;
+};
+
+function rowToAnnouncement(row: any): Announcement {
+  return {
+    id: row.id,
+    title: row.title,
+    description: row.description,
+    link: row.link || undefined,
+    photo: row.photo || undefined,
+    createdBy: row.created_by,
+    createdAt: new Date(row.created_at).toISOString(),
+  };
+}
+
+export async function getAnnouncements(): Promise<Announcement[]> {
+  const sql = getSql();
+  const rows = await sql`SELECT * FROM announcements ORDER BY created_at DESC`;
+  return rows.map(rowToAnnouncement);
+}
+
+export async function createAnnouncement(a: {
+  title: string;
+  description: string;
+  link?: string;
+  photo?: string;
+  createdBy: string;
+}): Promise<Announcement> {
+  const sql = getSql();
+  const id = "ann-" + Math.random().toString(36).slice(2, 10);
+  const rows = await sql`
+    INSERT INTO announcements (id, title, description, link, photo, created_by)
+    VALUES (${id}, ${a.title}, ${a.description}, ${a.link || null}, ${a.photo || null}, ${a.createdBy})
+    RETURNING *
+  `;
+  return rowToAnnouncement(rows[0]);
+}
+
+export async function deleteAnnouncement(id: string): Promise<void> {
+  const sql = getSql();
+  await sql`DELETE FROM announcements WHERE id = ${id}`;
+}
+
+
+// ---------- Notifications (in-app bell + web push) ----------
+export type RecipientType = "member" | "citizen";
+
+export type AppNotification = {
+  id: string;
+  kind: string;
+  title: string;
+  body: string;
+  section?: string;
+  createdAt: string;
+  read: boolean;
+};
+
+export type NotificationPayload = {
+  kind: string;
+  title: string;
+  body?: string;
+  section?: string;
+};
+
+function rowToNotification(row: any): AppNotification {
+  return {
+    id: row.id,
+    kind: row.kind,
+    title: row.title,
+    body: row.body || "",
+    section: row.section || undefined,
+    createdAt: new Date(row.created_at).toISOString(),
+    read: !!row.read_at,
+  };
+}
+
+function newNotificationId(): string {
+  return "ntf-" + crypto.randomBytes(8).toString("hex");
+}
+
+export async function insertNotification(
+  type: RecipientType,
+  email: string,
+  p: NotificationPayload
+): Promise<void> {
+  const sql = getSql();
+  await sql`
+    INSERT INTO notifications (id, recipient_type, recipient_email, kind, title, body, section)
+    VALUES (${newNotificationId()}, ${type}, ${email.toLowerCase()}, ${p.kind}, ${p.title}, ${p.body || ""}, ${p.section || null})
+  `;
+}
+
+// Inserts one notification per member (all members, or just admins).
+// Returns the emails that were notified so push can be sent to them.
+export async function insertMemberNotifications(
+  audience: "all" | "admins",
+  exceptEmail: string | null,
+  p: NotificationPayload
+): Promise<string[]> {
+  const sql = getSql();
+  const adminsOnly = audience === "admins";
+  const except = (exceptEmail || "").toLowerCase();
+  const rows = await sql`
+    INSERT INTO notifications (id, recipient_type, recipient_email, kind, title, body, section)
+    SELECT 'ntf-' || md5(random()::text || email || clock_timestamp()::text),
+           'member', lower(email), ${p.kind}, ${p.title}, ${p.body || ""}, ${p.section || null}
+    FROM members
+    WHERE (${adminsOnly}::boolean = FALSE OR role = 'admin')
+      AND lower(email) <> ${except}
+    RETURNING recipient_email
+  `;
+  return rows.map((r: any) => r.recipient_email as string);
+}
+
+export async function getNotifications(
+  type: RecipientType,
+  email: string,
+  limit = 30
+): Promise<{ notifications: AppNotification[]; unread: number }> {
+  const sql = getSql();
+  const e = email.toLowerCase();
+  const rows = await sql`
+    SELECT * FROM notifications
+    WHERE recipient_type = ${type} AND recipient_email = ${e}
+    ORDER BY created_at DESC
+    LIMIT ${limit}
+  `;
+  const c = await sql`
+    SELECT count(*)::int AS n FROM notifications
+    WHERE recipient_type = ${type} AND recipient_email = ${e} AND read_at IS NULL
+  `;
+  return { notifications: rows.map(rowToNotification), unread: c[0].n };
+}
+
+export async function markNotificationsRead(
+  type: RecipientType,
+  email: string,
+  id: string | null
+): Promise<void> {
+  const sql = getSql();
+  const e = email.toLowerCase();
+  if (id) {
+    await sql`
+      UPDATE notifications SET read_at = now()
+      WHERE id = ${id} AND recipient_type = ${type} AND recipient_email = ${e} AND read_at IS NULL
+    `;
+  } else {
+    await sql`
+      UPDATE notifications SET read_at = now()
+      WHERE recipient_type = ${type} AND recipient_email = ${e} AND read_at IS NULL
+    `;
+  }
+}
+
+// ---------- Push subscriptions ----------
+export type PushSub = { endpoint: string; p256dh: string; auth: string };
+
+export async function savePushSubscription(
+  type: RecipientType,
+  email: string,
+  sub: PushSub
+): Promise<void> {
+  const sql = getSql();
+  await sql`
+    INSERT INTO push_subscriptions (endpoint, recipient_type, recipient_email, p256dh, auth)
+    VALUES (${sub.endpoint}, ${type}, ${email.toLowerCase()}, ${sub.p256dh}, ${sub.auth})
+    ON CONFLICT (endpoint) DO UPDATE SET
+      recipient_type = EXCLUDED.recipient_type,
+      recipient_email = EXCLUDED.recipient_email,
+      p256dh = EXCLUDED.p256dh,
+      auth = EXCLUDED.auth
+  `;
+}
+
+export async function deletePushSubscription(
+  endpoint: string,
+  email?: string,
+  type?: RecipientType
+): Promise<void> {
+  const sql = getSql();
+  if (email && type) {
+    await sql`
+      DELETE FROM push_subscriptions
+      WHERE endpoint = ${endpoint} AND recipient_type = ${type} AND recipient_email = ${email.toLowerCase()}
+    `;
+  } else {
+    await sql`DELETE FROM push_subscriptions WHERE endpoint = ${endpoint}`;
+  }
+}
+
+export async function getPushSubscriptions(
+  type: RecipientType,
+  emails: string[]
+): Promise<PushSub[]> {
+  if (emails.length === 0) return [];
+  const sql = getSql();
+  const lowered = emails.map((e) => e.toLowerCase());
+  const rows = await sql`
+    SELECT endpoint, p256dh, auth FROM push_subscriptions
+    WHERE recipient_type = ${type} AND recipient_email = ANY(${lowered})
+  `;
+  return rows.map((r: any) => ({ endpoint: r.endpoint, p256dh: r.p256dh, auth: r.auth }));
 }

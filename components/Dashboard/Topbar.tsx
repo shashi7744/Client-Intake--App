@@ -6,12 +6,12 @@ import NotificationBell from "@/components/Dashboard/NotificationBell";
 export default function Topbar({
   email,
   isPaid,
-  onOpenRequests,
+  onNavigate,
   onToggleMobileMenu,
 }: {
   email: string | null;
   isPaid: boolean;
-  onOpenRequests: () => void;
+  onNavigate: (section: string) => void;
   onToggleMobileMenu?: () => void;
 }) {
   return (
@@ -29,7 +29,7 @@ export default function Topbar({
       </div>
 
       <div className="flex items-center gap-2 sm:gap-4">
-        <NotificationBell onOpenRequests={onOpenRequests} />
+        <NotificationBell onNavigate={onNavigate} />
         <div className="flex items-center gap-2 text-sm text-slate-700 sm:pl-3 sm:border-l sm:border-gray-200">
           <Avatar name={email || "Member"} size="sm" />
           <span className="font-medium hidden md:inline-block max-w-[140px] lg:max-w-[200px] truncate">

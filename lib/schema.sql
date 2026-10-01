@@ -69,6 +69,68 @@ CREATE TABLE IF NOT EXISTS complaints (
 CREATE INDEX IF NOT EXISTS idx_complaints_contact ON complaints(contact);
 CREATE INDEX IF NOT EXISTS idx_complaints_district ON complaints(district);
 
+-- District / taluka heads (sub-admins). A member can head one area; the badge
+-- and "shown first" ordering in All Clients are driven by these columns.
+ALTER TABLE members ADD COLUMN IF NOT EXISTS head_level TEXT CHECK (head_level IN ('district', 'taluka'));
+ALTER TABLE members ADD COLUMN IF NOT EXISTS head_district TEXT;
+ALTER TABLE members ADD COLUMN IF NOT EXISTS head_taluka TEXT;
+
+-- Marks the client row that is the member's own profile (vs clients they
+-- registered for others). Backfilled once: a member's earliest row.
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS is_profile BOOLEAN NOT NULL DEFAULT FALSE;
+UPDATE clients SET is_profile = TRUE
+WHERE id IN (SELECT DISTINCT ON (submitted_by) id FROM clients ORDER BY submitted_by, submitted_at ASC)
+  AND NOT EXISTS (SELECT 1 FROM clients c2 WHERE c2.submitted_by = clients.submitted_by AND c2.is_profile);
+
+-- Mobile number so admins can reach a complainant on WhatsApp / call.
+ALTER TABLE citizens ADD COLUMN IF NOT EXISTS phone TEXT;
+ALTER TABLE complaints ADD COLUMN IF NOT EXISTS phone TEXT;
+
+CREATE TABLE IF NOT EXISTS citizen_devices (
+  token_hash     TEXT PRIMARY KEY,
+  citizen_email  TEXT NOT NULL REFERENCES citizens(email) ON DELETE CASCADE,
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_citizen_devices_email ON citizen_devices(citizen_email);
+
+CREATE TABLE IF NOT EXISTS announcements (
+  id           TEXT PRIMARY KEY,
+  title        TEXT NOT NULL,
+  description  TEXT NOT NULL,
+  link         TEXT,
+  photo        TEXT,
+  created_by   TEXT NOT NULL REFERENCES members(email) ON DELETE CASCADE,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+ALTER TABLE announcements ADD COLUMN IF NOT EXISTS photo TEXT;
+CREATE INDEX IF NOT EXISTS idx_announcements_created_at ON announcements(created_at DESC);
+
+CREATE TABLE IF NOT EXISTS notifications (
+  id              TEXT PRIMARY KEY,
+  recipient_type  TEXT NOT NULL CHECK (recipient_type IN ('member', 'citizen')),
+  recipient_email TEXT NOT NULL,
+  kind            TEXT NOT NULL,
+  title           TEXT NOT NULL,
+  body            TEXT NOT NULL DEFAULT '',
+  section         TEXT, -- which dashboard screen to open when clicked
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  read_at         TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_notifications_recipient
+  ON notifications(recipient_type, recipient_email, created_at DESC);
+
+-- One row per browser/phone that allowed push notifications.
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+  endpoint        TEXT PRIMARY KEY,
+  recipient_type  TEXT NOT NULL CHECK (recipient_type IN ('member', 'citizen')),
+  recipient_email TEXT NOT NULL,
+  p256dh          TEXT NOT NULL,
+  auth            TEXT NOT NULL,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_push_subscriptions_recipient
+  ON push_subscriptions(recipient_type, recipient_email);
+
 CREATE TABLE IF NOT EXISTS access_requests (
   id               TEXT PRIMARY KEY,
   client_id        TEXT NOT NULL REFERENCES clients(id) ON DELETE CASCADE,

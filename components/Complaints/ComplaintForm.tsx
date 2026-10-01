@@ -11,6 +11,7 @@ import {
   PlusCircle,
   MessageSquareText,
   MapPinned,
+  Phone,
 } from "lucide-react";
 
 function SectionHeading({
@@ -39,7 +40,7 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
   return <label className="text-sm font-semibold text-slate-700 mb-1.5 block">{children}</label>;
 }
 
-export default function ComplaintForm() {
+export default function ComplaintForm({ defaultPhone = "" }: { defaultPhone?: string }) {
   const [submitted, setSubmitted] = useState(false);
   const {
     register,
@@ -50,7 +51,7 @@ export default function ComplaintForm() {
   } = useForm<ComplaintFormData>({
     resolver: zodResolver(complaintSchema),
     mode: "onChange",
-    defaultValues: { state: STATE, category: "General" },
+    defaultValues: { state: STATE, category: "General", phone: defaultPhone },
   });
 
   const onSubmit = async (data: ComplaintFormData) => {
@@ -75,7 +76,7 @@ export default function ComplaintForm() {
         <button
           type="button"
           onClick={() => {
-            reset({ state: STATE, category: "General" });
+            reset({ state: STATE, category: "General", phone: defaultPhone });
             setSubmitted(false);
           }}
           className="inline-flex items-center gap-1.5 bg-violet-600 text-white hover:bg-violet-700"
@@ -105,6 +106,23 @@ export default function ComplaintForm() {
         {errors.description && (
           <p className="text-red-500 text-xs mt-1">{errors.description.message}</p>
         )}
+      </div>
+
+      <div className="pt-6 border-t border-gray-100">
+        <SectionHeading
+          icon={<Phone size={16} />}
+          title="Your mobile number"
+          subtitle="Used only by the admin to contact you about this complaint"
+        />
+        <input
+          {...register("phone")}
+          type="tel"
+          inputMode="numeric"
+          maxLength={10}
+          placeholder="10-digit mobile number"
+          className="w-full sm:w-1/2"
+        />
+        {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone.message}</p>}
       </div>
 
       <div className="pt-6 border-t border-gray-100">

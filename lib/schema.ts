@@ -29,13 +29,27 @@ export const clientSchema = z.object({
   taluka: z.string().min(1, "Taluka is required"),
   city: z.string().min(1, "City is required"),
   ward: z.string().min(1, "Ward is required"),
-});
+}).refine(
+  (data) => {
+    const d = new Date(data.dobYear, data.dobMonth - 1, data.dobDay);
+    return (
+      d.getFullYear() === data.dobYear &&
+      d.getMonth() === data.dobMonth - 1 &&
+      d.getDate() === data.dobDay
+    );
+  },
+  {
+    message: "Enter a valid calendar date",
+    path: ["dobDay"],
+  }
+);
 
 export type ClientFormData = z.infer<typeof clientSchema>;
 
 export const complaintSchema = z.object({
   category: z.string().optional().default("General"),
   description: z.string().min(10, "Please describe the issue in a bit more detail"),
+  phone: z.string().regex(/^\d{10}$/, "Enter a valid 10-digit mobile number"),
   photo: z.string().optional(),
 
   state: z.string().min(1, "State is required"),

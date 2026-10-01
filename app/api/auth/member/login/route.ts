@@ -1,10 +1,18 @@
 import { NextResponse } from "next/server";
 import { findMemberByEmail } from "@/lib/db";
+import { createSessionCookie } from "@/lib/sessionToken";
 
 export async function POST(req: Request) {
-  const { email, password } = await req.json();
+  const { email, password } = await req.json().catch(() => ({}));
 
-  const member = await findMemberByEmail(email || "");
+  if (!email || !password) {
+    return NextResponse.json(
+      { status: "error", message: "Email and password are required" },
+      { status: 400 }
+    );
+  }
+
+  const member = await findMemberByEmail(email);
 
   if (!member || member.password !== password) {
     return NextResponse.json(
@@ -19,11 +27,12 @@ export async function POST(req: Request) {
     isPaid: member.isPaid,
   });
 
-  response.cookies.set("session", "member:" + member.email, {
+  response.cookies.set("session", createSessionCookie("member", member.email), {
     httpOnly: true,
     sameSite: "lax",
     path: "/",
-    maxAge: 60 * 60 * 24 * 365, // ~1 year - stay logged in until they log out
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 60 * 60 * 24 * 365,
   });
 
   return response;

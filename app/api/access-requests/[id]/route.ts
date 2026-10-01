@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { respondToAccessRequest } from "@/lib/db";
 import { getCurrentMember } from "@/lib/session";
+import { notifyUser } from "@/lib/notify";
 
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   const member = await getCurrentMember();
@@ -25,6 +26,13 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       { status: 404 }
     );
   }
+
+  await notifyUser("member", updated.requesterEmail, {
+    kind: "access_response",
+    title: action === "approve" ? "Phone number request approved" : "Phone number request denied",
+    body: `Your request for ${updated.clientName}'s number was ${action === "approve" ? "approved" : "denied"}`,
+    section: "all-clients",
+  });
 
   return NextResponse.json({ status: "success", request: updated });
 }

@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { UserPlus, Users, Bell, LayoutGrid, UserCog, ClipboardList } from "lucide-react";
+import { useState, useEffect } from "react";
+import { UserPlus, Users, Bell, LayoutGrid, UserCog, ClipboardList, Megaphone } from "lucide-react";
 import Sidebar, { Section } from "@/components/Dashboard/Sidebar";
 import Topbar from "@/components/Dashboard/Topbar";
 import SectionHero, { HeroAccent } from "@/components/Dashboard/SectionHero";
 import DashboardOverview from "@/components/Dashboard/DashboardOverview";
-import ClientFormWrapper from "@/components/ClientForm/ClientFormWrapper";
+import AdminClientEntryForm from "@/components/Dashboard/AdminClientEntryForm";
+import AnnouncementsAdmin from "@/components/Dashboard/AnnouncementsAdmin";
 import ClientsTable from "@/components/Dashboard/ClientsTable";
 import RequestsPanel from "@/components/Dashboard/RequestsPanel";
 import AdminRequestsPanel from "@/components/Dashboard/AdminRequestsPanel";
@@ -20,13 +21,13 @@ const HERO_CONTENT: Record<
   overview: {
     icon: <LayoutGrid size={22} />,
     title: "Dashboard Overview",
-    subtitle: "A quick summary of your client registrations",
+    subtitle: "Announcements and updates from the admin",
     accent: "indigo",
   },
   "new-entry": {
     icon: <UserPlus size={22} />,
-    title: "Register Client",
-    subtitle: "Fill all details to create a client record",
+    title: "New Client Entry",
+    subtitle: "Create a member account and client record for someone else",
     accent: "emerald",
   },
   "all-clients": {
@@ -59,6 +60,12 @@ const HERO_CONTENT: Record<
     subtitle: "Review and approve phone number access requests across all members",
     accent: "amber",
   },
+  announcements: {
+    icon: <Megaphone size={22} />,
+    title: "Announcements",
+    subtitle: "Share updates with every member - visible on their dashboard",
+    accent: "indigo",
+  },
 };
 
 export default function DashboardShell({
@@ -73,6 +80,16 @@ export default function DashboardShell({
   const [section, setSection] = useState<Section>("overview");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [tableKey, setTableKey] = useState(0);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const s = params.get("section");
+    if (s && s in HERO_CONTENT) {
+      const next = s === "requests" && isAdmin ? "admin-requests" : s;
+      if (next in HERO_CONTENT) setSection(next as Section);
+    }
+  }, [isAdmin]);
 
   const hero = HERO_CONTENT[section] || HERO_CONTENT.overview;
 
@@ -91,7 +108,12 @@ export default function DashboardShell({
         <Topbar
           email={email}
           isPaid={isPaid}
-          onOpenRequests={() => setSection(isAdmin ? "admin-requests" : "requests")}
+          onNavigate={(target) => {
+            // Notifications name a logical screen; admins have their own
+            // Requests screen.
+            const next = target === "requests" && isAdmin ? "admin-requests" : target;
+            if (next in HERO_CONTENT) setSection(next as Section);
+          }}
           onToggleMobileMenu={() => setMobileMenuOpen((o) => !o)}
         />
 
@@ -110,13 +132,14 @@ export default function DashboardShell({
               }`}
             >
               {section === "overview" && <DashboardOverview isAdmin={isAdmin} />}
-              {section === "new-entry" && (
-                <ClientFormWrapper onSubmitted={() => setTableKey((k) => k + 1)} />
+              {section === "new-entry" && isAdmin && (
+                <AdminClientEntryForm onSubmitted={() => setTableKey((k) => k + 1)} />
               )}
+              {section === "announcements" && isAdmin && <AnnouncementsAdmin />}
               {section === "all-clients" && <ClientsTable key={tableKey} />}
               {section === "requests" && <RequestsPanel />}
               {section === "admin-requests" && isAdmin && <AdminRequestsPanel />}
-              {section === "members" && isAdmin && <MembersTable />}
+              {section === "members" && isAdmin && <MembersTable currentEmail={email} />}
               {section === "all-complaints" && isAdmin && <ComplaintsList />}
             </div>
           </div>

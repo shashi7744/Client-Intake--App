@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Mail, ShieldCheck, ArrowRight, User, CheckCircle2, RefreshCw } from "lucide-react";
+import { Mail, ShieldCheck, ArrowRight, User, Phone, CheckCircle2, RefreshCw } from "lucide-react";
 
 export default function CitizenLoginForm() {
   const router = useRouter();
@@ -11,6 +11,7 @@ export default function CitizenLoginForm() {
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -35,8 +36,6 @@ export default function CitizenLoginForm() {
     try {
       const res = await fetch("/api/auth/citizen/remembered-login", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: rememberedEmail }),
       });
 
       const data = await res.json();
@@ -44,6 +43,7 @@ export default function CitizenLoginForm() {
 
       if (res.ok && data.status === "success") {
         localStorage.setItem("last_portal", "citizen");
+        if (data.email) localStorage.setItem("citizen_email", data.email);
         router.push("/citizen");
         router.refresh();
       } else {
@@ -119,7 +119,7 @@ export default function CitizenLoginForm() {
     const res = await fetch("/api/auth/citizen/set-name", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ name, phone }),
     });
     setLoading(false);
 
@@ -301,10 +301,27 @@ export default function CitizenLoginForm() {
               Just once — helps us identify your complaints. You won't be asked again.
             </p>
           </div>
+          <div>
+            <label className="flex items-center gap-1.5 text-sm font-semibold text-slate-700 mb-1.5">
+              <Phone size={16} className="text-amber-600" />
+              Mobile Number
+            </label>
+            <input
+              type="tel"
+              inputMode="numeric"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+              placeholder="10-digit mobile number"
+              className="w-full focus:!border-amber-500 focus:!ring-amber-100"
+            />
+            <p className="text-xs text-gray-400 mt-1.5">
+              Used only by the admin to contact you about your complaints (WhatsApp or call).
+            </p>
+          </div>
           {message && <p className="text-red-500 text-sm">{message}</p>}
           <button
             type="submit"
-            disabled={loading || !name.trim()}
+            disabled={loading || !name.trim() || phone.length !== 10}
             className="w-full flex items-center justify-center gap-2 bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-50"
           >
             {loading ? "Saving..." : "Continue"}

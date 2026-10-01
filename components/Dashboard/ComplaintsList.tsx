@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Complaint, ComplaintStatus } from "@/lib/db";
 import { Inbox, ImageOff } from "lucide-react";
+import ContactActions from "@/components/Dashboard/ContactActions";
 import LocationFilterBar, {
   LocationFilter,
   EMPTY_LOCATION_FILTER,
@@ -154,6 +155,7 @@ export default function ComplaintsList() {
                     <span className="text-gray-500">{c.contact}</span>
                   </div>
                 )}
+                {c.phone && <ContactActions phone={c.phone} />}
               </div>
             ))}
           </div>
@@ -205,6 +207,7 @@ export default function ComplaintsList() {
                           <p className="text-slate-900 font-medium leading-tight">{c.citizenName}</p>
                         )}
                         <span className={c.citizenName ? "text-xs text-gray-400" : ""}>{c.contact}</span>
+                        <ContactActions phone={c.phone} />
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
                         <select

@@ -108,7 +108,7 @@ export default function AdminRequestsPanel() {
             >
               {s === "all" ? "All Requests" : s}
               {s === "pending" && pendingCount > 0 && (
-                <span className="ml-1.5 px-1.5 py-0.2 rounded-full bg-amber-500 text-white text-[10px] font-bold">
+                <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-bold">
                   {pendingCount}
                 </span>
               )}

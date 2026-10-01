@@ -5,11 +5,28 @@ import { ShieldCheck, AlertTriangle, ClipboardList } from "lucide-react";
 import LogoutButton from "@/components/Login/LogoutButton";
 import ComplaintForm from "@/components/Complaints/ComplaintForm";
 import MyComplaints from "@/components/Citizen/MyComplaints";
+import NotificationBell from "@/components/Dashboard/NotificationBell";
 
 type Tab = "file" | "mine";
 
-export default function CitizenShell({ email, name }: { email: string | null; name?: string | null }) {
+export default function CitizenShell({
+  email,
+  name,
+  phone,
+}: {
+  email: string | null;
+  name?: string | null;
+  phone?: string | null;
+}) {
   const [tab, setTab] = useState<Tab>("file");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const s = params.get("section");
+      if (s === "mine" || s === "file") setTab(s);
+    }
+  }, []);
 
   useEffect(() => {
     if (email) {
@@ -35,6 +52,7 @@ export default function CitizenShell({ email, name }: { email: string | null; na
           <span className="text-xs sm:text-sm text-gray-600 max-w-[120px] sm:max-w-[220px] truncate">
             {name ? name : email}
           </span>
+          <NotificationBell onNavigate={(s) => setTab(s === "file" ? "file" : "mine")} />
           <LogoutButton />
         </div>
       </header>
@@ -62,7 +80,7 @@ export default function CitizenShell({ email, name }: { email: string | null; na
         </div>
 
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 sm:p-6 animate-fadeIn" key={tab}>
-          {tab === "file" ? <ComplaintForm /> : <MyComplaints />}
+          {tab === "file" ? <ComplaintForm defaultPhone={phone ?? ""} /> : <MyComplaints />}
         </div>
       </main>
     </div>

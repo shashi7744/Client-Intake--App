@@ -1,20 +1,19 @@
 import { NextResponse } from "next/server";
-import { findCitizenByEmail } from "@/lib/db";
+import { cookies } from "next/headers";
+import { verifyCitizenDeviceToken } from "@/lib/db";
+import { createSessionCookie } from "@/lib/sessionToken";
 
-// Restores session for a previously registered citizen on this device.
-// Once registered via OTP, the citizen is remembered and can log in without OTP.
-export async function POST(req: Request) {
-  const { email } = await req.json().catch(() => ({}));
+// Restores a citizen session on a device that previously completed OTP.
+// Identity comes ONLY from the httpOnly citizen_device cookie, verified
+// against a server-side hash. A client-supplied email is never trusted.
+export async function POST() {
+  const rawToken = cookies().get("citizen_device")?.value;
+  const citizen = rawToken ? await verifyCitizenDeviceToken(rawToken) : undefined;
 
-  if (!email || typeof email !== "string") {
-    return NextResponse.json({ status: "error", message: "Email required" }, { status: 400 });
-  }
-
-  const citizen = await findCitizenByEmail(email.toLowerCase().trim());
   if (!citizen) {
     return NextResponse.json(
-      { status: "error", message: "Citizen not registered yet. Please verify with OTP first." },
-      { status: 404 }
+      { status: "error", message: "This device is not recognised. Please verify with OTP." },
+      { status: 401 }
     );
   }
 
@@ -24,13 +23,12 @@ export async function POST(req: Request) {
     email: citizen.email,
     name: citizen.name,
   });
-
-  response.cookies.set("session", "citizen:" + citizen.email, {
+  response.cookies.set("session", createSessionCookie("citizen", citizen.email), {
     httpOnly: true,
     sameSite: "lax",
     path: "/",
-    maxAge: 60 * 60 * 24 * 365, // 1 year
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 60 * 60 * 24 * 365,
   });
-
   return response;
 }

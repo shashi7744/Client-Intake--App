@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
-import { findMemberByEmail, createMember, verifyEmailOtp } from "@/lib/db";
+import { findMemberByEmail, createMember, saveClient, verifyEmailOtp } from "@/lib/db";
+import { clientSchema } from "@/lib/schema";
+import { buildClientRecord } from "@/lib/clientBuilder";
+import { notifyAdmins } from "@/lib/notify";
 import { emailConfigured } from "@/lib/email";
+import { createSessionCookie } from "@/lib/sessionToken";
 
 export async function POST(req: Request) {
-  const { email, password, otp } = await req.json();
+  const { email, password, otp, client } = await req.json().catch(() => ({}));
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return NextResponse.json(
@@ -14,6 +18,13 @@ export async function POST(req: Request) {
   if (!password || password.length < 6) {
     return NextResponse.json(
       { status: "error", message: "Password must be at least 6 characters" },
+      { status: 400 }
+    );
+  }
+  const parsedClient = clientSchema.safeParse(client);
+  if (!parsedClient.success) {
+    return NextResponse.json(
+      { status: "error", message: "Please complete all your personal and location details" },
       { status: 400 }
     );
   }
@@ -49,17 +60,26 @@ export async function POST(req: Request) {
   await createMember({
     email,
     password,
-    isPaid: false,
+    isPaid: true,
     role: "member",
     createdAt: new Date().toISOString(),
   });
+  await saveClient(buildClientRecord(parsedClient.data, email, true));
+
+  await notifyAdmins({
+    kind: "member_new",
+    title: "New member signed up",
+    body: `${parsedClient.data.name} (${email})`,
+    section: "members",
+  });
 
   const response = NextResponse.json({ status: "success", message: "Account created" });
-  response.cookies.set("session", "member:" + email, {
+  response.cookies.set("session", createSessionCookie("member", email), {
     httpOnly: true,
     sameSite: "lax",
     path: "/",
-    maxAge: 60 * 60 * 24 * 365, // ~1 year - stay logged in until they log out
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 60 * 60 * 24 * 365,
   });
   return response;
 }

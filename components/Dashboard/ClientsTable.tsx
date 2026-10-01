@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { AccessRequest } from "@/lib/db";
-import { Inbox, Search, MapPin, Users } from "lucide-react";
+import { Inbox, Search, MapPin, Users, MapPinned } from "lucide-react";
+import HeadBadge, { HeadInfo } from "@/components/shared/HeadBadge";
 import Avatar from "@/components/shared/Avatar";
 import ContactCell from "@/components/Dashboard/ContactCell";
 import LocationFilterBar, {
@@ -24,6 +25,7 @@ type ClientRow = {
   ward: string;
   submittedBy: string;
   submittedAt: string;
+  head?: HeadInfo | null;
 };
 
 export default function ClientsTable() {
@@ -61,19 +63,43 @@ export default function ClientsTable() {
     setOutgoing((prev) => ({ ...prev, [clientId]: request }));
   };
 
+  // Nothing is listed until a district is chosen. Once it is, that district's
+  // head is shown first, then its taluka heads, then everyone else.
+  const districtChosen = !!filter.district;
+
   const filtered = useMemo(() => {
-    if (!clients) return [];
-    return clients.filter((c) => {
-      if (filter.district && c.district !== filter.district) return false;
-      if (filter.taluka && !c.taluka.toLowerCase().includes(filter.taluka.toLowerCase())) return false;
-      if (filter.city && !c.city.toLowerCase().includes(filter.city.toLowerCase())) return false;
-      if (search) {
-        const q = search.toLowerCase();
-        const contactMatch = c.contact ? c.contact.includes(q) : false;
-        if (!c.name.toLowerCase().includes(q) && !contactMatch) return false;
-      }
-      return true;
-    });
+    if (!clients || !filter.district) return [];
+    const typedTaluka = filter.taluka.trim().toLowerCase();
+    const headsThisDistrict = (c: ClientRow) => c.head?.district === filter.district;
+    const isDistrictHead = (c: ClientRow) => headsThisDistrict(c) && c.head?.level === "district";
+    const isTalukaHead = (c: ClientRow) => headsThisDistrict(c) && c.head?.level === "taluka";
+    const talukaHeadMatchesTyped = (c: ClientRow) =>
+      !typedTaluka || (c.head?.taluka ?? "").toLowerCase().includes(typedTaluka);
+
+    const rank = (c: ClientRow) => {
+      if (isDistrictHead(c)) return 0;
+      if (isTalukaHead(c)) return typedTaluka && talukaHeadMatchesTyped(c) ? 1 : 2;
+      return 3;
+    };
+
+    return clients
+      .filter((c) => {
+        const head = isDistrictHead(c) || (isTalukaHead(c) && talukaHeadMatchesTyped(c));
+        if (!head) {
+          if (c.district !== filter.district) return false;
+          if (typedTaluka && !c.taluka.toLowerCase().includes(typedTaluka)) return false;
+          if (filter.city && !c.city.toLowerCase().includes(filter.city.toLowerCase())) return false;
+        }
+        if (search) {
+          const q = search.toLowerCase();
+          const contactMatch = c.contact ? c.contact.includes(q) : false;
+          if (!c.name.toLowerCase().includes(q) && !contactMatch) return false;
+        }
+        return true;
+      })
+      .map((c, idx) => ({ c, idx }))
+      .sort((a, b) => rank(a.c) - rank(b.c) || a.idx - b.idx)
+      .map((x) => x.c);
   }, [clients, filter, search]);
 
   if (error) return <p className="text-red-500 text-sm">{error}</p>;
@@ -96,10 +122,14 @@ export default function ClientsTable() {
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div className="flex items-center gap-2 text-sm text-slate-600">
           <Users size={15} className="text-violet-600" />
-          <span className="font-semibold text-slate-900">{filtered.length}</span>
-          {filtered.length === 1 ? "client" : "clients"}
-          {filtered.length !== clients.length && (
-            <span className="text-gray-400">of {clients.length}</span>
+          {districtChosen ? (
+            <>
+              <span className="font-semibold text-slate-900">{filtered.length}</span>
+              {filtered.length === 1 ? "client" : "clients"}
+              <span className="text-gray-400">in {filter.district}</span>
+            </>
+          ) : (
+            <span className="text-gray-500">Choose a district to see clients</span>
           )}
         </div>
         <div className="relative w-full sm:w-64">
@@ -115,7 +145,17 @@ export default function ClientsTable() {
 
       <LocationFilterBar value={filter} onChange={setFilter} />
 
-      {clients.length === 0 ? (
+      {!districtChosen ? (
+        <div className="text-center py-14 animate-fadeIn">
+          <div className="w-12 h-12 rounded-full bg-violet-50 flex items-center justify-center mx-auto mb-3">
+            <MapPinned size={22} className="text-violet-500" />
+          </div>
+          <p className="text-sm font-medium text-slate-700">Select a district to view members</p>
+          <p className="text-xs text-gray-400 mt-1">
+            Pick a district in the filter above. The district head is shown first.
+          </p>
+        </div>
+      ) : clients.length === 0 ? (
         <div className="text-center py-14 animate-fadeIn">
           <div className="w-12 h-12 rounded-full bg-violet-50 flex items-center justify-center mx-auto mb-3">
             <Inbox size={22} className="text-violet-400" />
@@ -142,6 +182,7 @@ export default function ClientsTable() {
                     <Avatar name={c.name} size="md" />
                     <div>
                       <p className="font-semibold text-slate-900 text-sm leading-tight">{c.name}</p>
+                      <HeadBadge head={c.head} />
                       <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
                         <MapPin size={11} />
                         {c.city}, Ward {c.ward}
@@ -212,6 +253,7 @@ export default function ClientsTable() {
                           <Avatar name={c.name} size="md" />
                           <div>
                             <p className="font-medium text-slate-900 leading-tight">{c.name}</p>
+                            <HeadBadge head={c.head} />
                             <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
                               <MapPin size={11} />
                               {c.city}

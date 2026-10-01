@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
-import { findOrCreateCitizen, verifyEmailOtp } from "@/lib/db";
+import { createCitizenDeviceToken, findOrCreateCitizen, verifyEmailOtp } from "@/lib/db";
 import { emailConfigured } from "@/lib/email";
+import { createSessionCookie } from "@/lib/sessionToken";
 
 export async function POST(req: Request) {
-  const { email, otp } = await req.json();
+  const { email, otp } = await req.json().catch(() => ({}));
 
   if (!email || !otp) {
     return NextResponse.json(
@@ -28,17 +29,27 @@ export async function POST(req: Request) {
   }
 
   const citizen = await findOrCreateCitizen(email);
+  const deviceToken = await createCitizenDeviceToken(citizen.email);
 
+  const isProd = process.env.NODE_ENV === "production";
   const response = NextResponse.json({
     status: "success",
     message: "Login successful",
     needsName: !citizen.name,
   });
-  response.cookies.set("session", "citizen:" + citizen.email, {
+  response.cookies.set("session", createSessionCookie("citizen", citizen.email), {
     httpOnly: true,
     sameSite: "lax",
     path: "/",
-    maxAge: 60 * 60 * 24 * 365, // ~1 year - stay logged in until they log out
+    secure: isProd,
+    maxAge: 60 * 60 * 24 * 365,
+  });
+  response.cookies.set("citizen_device", deviceToken, {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    secure: isProd,
+    maxAge: 60 * 60 * 24 * 365,
   });
   return response;
 }

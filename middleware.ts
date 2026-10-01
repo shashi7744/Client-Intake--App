@@ -3,8 +3,11 @@ import { NextRequest, NextResponse } from "next/server";
 function getSessionType(req: NextRequest): "member" | "citizen" | null {
   const raw = req.cookies.get("session")?.value;
   if (!raw) return null;
-  if (raw.startsWith("member:")) return "member";
-  if (raw.startsWith("citizen:")) return "citizen";
+  // If signed (payload.signature), extract payload before signature
+  const dotIndex = raw.lastIndexOf(".");
+  const payload = dotIndex !== -1 ? raw.slice(0, dotIndex) : raw;
+  if (payload.startsWith("member:")) return "member";
+  if (payload.startsWith("citizen:")) return "citizen";
   return null;
 }
 

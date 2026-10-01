@@ -7,6 +7,23 @@ export default function LogoutButton({ redirectTo = "/login" }: { redirectTo?: s
   const router = useRouter();
 
   const logout = async () => {
+    // Stop phone notifications for this user on this device before leaving.
+    try {
+      if ("serviceWorker" in navigator) {
+        const reg = await navigator.serviceWorker.getRegistration();
+        const sub = await reg?.pushManager.getSubscription();
+        if (sub) {
+          await fetch("/api/push/subscribe", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ endpoint: sub.endpoint }),
+          }).catch(() => {});
+          await sub.unsubscribe().catch(() => {});
+        }
+      }
+    } catch {
+      // never block logout
+    }
     await fetch("/api/auth/logout", { method: "POST" });
     router.push(redirectTo);
     router.refresh();

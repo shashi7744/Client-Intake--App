@@ -1,6 +1,6 @@
 "use client";
 
-import { UserPlus, Users, ShieldCheck, LayoutGrid, Bell, UserCog, ClipboardList, X } from "lucide-react";
+import { UserPlus, Users, ShieldCheck, LayoutGrid, Bell, UserCog, ClipboardList, Megaphone, X } from "lucide-react";
 
 export type Section =
   | "overview"
@@ -9,7 +9,8 @@ export type Section =
   | "requests"
   | "members"
   | "all-complaints"
-  | "admin-requests";
+  | "admin-requests"
+  | "announcements";
 
 export default function Sidebar({
   section,
@@ -33,7 +34,6 @@ export default function Sidebar({
     icon: React.ReactNode;
   }[] = [
     { id: "overview", label: "Overview", icon: <LayoutGrid size={18} /> },
-    { id: "new-entry", label: "New Client Entry", icon: <UserPlus size={18} /> },
     { id: "all-clients", label: "All Clients", icon: <Users size={18} /> },
     ...(!isAdmin ? [{ id: "requests" as Section, label: "Requests", icon: <Bell size={18} /> }] : []),
   ];
@@ -43,7 +43,9 @@ export default function Sidebar({
     label: string;
     icon: React.ReactNode;
   }[] = [
+    { id: "new-entry", label: "New Client Entry", icon: <UserPlus size={18} /> },
     { id: "members", label: "Members", icon: <UserCog size={18} /> },
+    { id: "announcements", label: "Announcements", icon: <Megaphone size={18} /> },
     { id: "all-complaints", label: "All Complaints", icon: <ClipboardList size={18} /> },
     { id: "admin-requests", label: "Requests", icon: <Bell size={18} /> },
   ];

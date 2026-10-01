@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { complaintSchema } from "@/lib/schema";
-import { getComplaints, saveComplaint, Complaint } from "@/lib/db";
+import { getComplaints, saveComplaint, setCitizenPhone, Complaint } from "@/lib/db";
 import { getCurrentMember, getCurrentCitizenEmail } from "@/lib/session";
+import { notifyAdmins } from "@/lib/notify";
 
 export async function GET() {
   const member = await getCurrentMember();
@@ -44,11 +45,21 @@ export async function POST(req: Request) {
     city: data.city,
     ward: data.ward,
     contact: email,
+    phone: data.phone,
     status: "Pending",
     submittedAt: new Date().toISOString(),
   };
 
   await saveComplaint(complaint);
+  // Remember the number on the citizen's profile to pre-fill next time.
+  await setCitizenPhone(email, data.phone);
+
+  await notifyAdmins({
+    kind: "complaint_new",
+    title: "New complaint filed",
+    body: `${data.city}, ${data.district}: ${data.description.slice(0, 80)}`,
+    section: "all-complaints",
+  });
 
   return NextResponse.json({ status: "success" });
 }

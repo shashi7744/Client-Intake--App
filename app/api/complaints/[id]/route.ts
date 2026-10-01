@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { updateComplaintStatus, ComplaintStatus } from "@/lib/db";
 import { getCurrentMember } from "@/lib/session";
+import { notifyUser } from "@/lib/notify";
 
 const VALID_STATUSES: ComplaintStatus[] = ["Pending", "In Progress", "Resolved"];
 
@@ -25,6 +26,13 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       { status: 404 }
     );
   }
+
+  await notifyUser("citizen", updated.contact, {
+    kind: "complaint_status",
+    title: `Your complaint is now ${updated.status}`,
+    body: updated.description.slice(0, 100),
+    section: "mine",
+  });
 
   return NextResponse.json({ status: "success", complaint: updated });
 }

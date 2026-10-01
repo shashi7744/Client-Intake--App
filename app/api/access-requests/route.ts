@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { getClients, getAccessRequests, requestClientAccess } from "@/lib/db";
+import { getClients, getAccessRequests, requestClientAccess, findAccessRequest } from "@/lib/db";
+import { notifyUser } from "@/lib/notify";
 import { getCurrentMember } from "@/lib/session";
 
 // POST { clientId } - a member requests to see a client's phone number.
@@ -21,7 +22,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ status: "approved", ownRecord: true });
   }
 
+  const before = await findAccessRequest(client.id, member.email);
   const request = await requestClientAccess(client, member.email);
+  // Only alert the owner when this is a fresh (or re-opened) request.
+  if (request.status === "pending" && (!before || before.status === "denied")) {
+    await notifyUser("member", client.submittedBy, {
+      kind: "access_request",
+      title: "New phone number request",
+      body: `${member.email} wants to see ${client.name}'s number`,
+      section: "requests",
+    });
+  }
   return NextResponse.json({ status: request.status, request });
 }
 

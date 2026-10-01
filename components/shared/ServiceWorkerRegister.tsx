@@ -4,12 +4,13 @@ import { useEffect } from "react";
 
 export default function ServiceWorkerRegister() {
   useEffect(() => {
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js").catch(() => {
-        // Non-fatal - the app still works fully without the service worker,
-        // it just won't be installable/offline-resilient in that case.
+    if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
+
+    navigator.serviceWorker
+      .register("/sw.js")
+      .catch((err) => {
+        console.warn("ServiceWorker registration failed:", err);
       });
-    }
   }, []);
 
   return null;

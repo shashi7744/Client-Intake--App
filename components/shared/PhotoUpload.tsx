@@ -3,12 +3,12 @@
 import { useRef, useState } from "react";
 import { Camera, ImagePlus, X, Loader2 } from "lucide-react";
 
-const MAX_DIMENSION = 640;
+const DEFAULT_MAX_DIMENSION = 640;
 const JPEG_QUALITY = 0.82;
 
 // Resizes/compresses the image in the browser before it's stored as a data
 // URL, so a phone photo doesn't blow up the (mock, file-based) database.
-function compressImage(file: File): Promise<string> {
+function compressImage(file: File, maxDimension: number): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = () => reject(new Error("Could not read file"));
@@ -16,7 +16,7 @@ function compressImage(file: File): Promise<string> {
       const img = new Image();
       img.onerror = () => reject(new Error("Could not read image"));
       img.onload = () => {
-        const scale = Math.min(1, MAX_DIMENSION / Math.max(img.width, img.height));
+        const scale = Math.min(1, maxDimension /Math.max(img.width, img.height));
         const width = Math.round(img.width * scale);
         const height = Math.round(img.height * scale);
 
@@ -43,12 +43,14 @@ export default function PhotoUpload({
   label = "Photo",
   helperText = "JPG or PNG, up to 8MB.",
   error,
+  maxDimension = DEFAULT_MAX_DIMENSION,
 }: {
   value: string | undefined;
   onChange: (dataUrl: string) => void;
   label?: string;
   helperText?: string;
   error?: string;
+  maxDimension?: number;
 }) {
   const [processing, setProcessing] = useState(false);
   const [dragActive, setDragActive] = useState(false);
@@ -68,7 +70,7 @@ export default function PhotoUpload({
     }
     setProcessing(true);
     try {
-      const dataUrl = await compressImage(file);
+      const dataUrl = await compressImage(file, maxDimension);
       onChange(dataUrl);
     } catch {
       setLocalError("Could not process that image. Try another one.");
@@ -98,7 +100,16 @@ export default function PhotoUpload({
           handleFile(e.dataTransfer.files?.[0]);
         }}
         onClick={() => inputRef.current?.click()}
-        className={`relative flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-6 text-center cursor-pointer transition-colors ${
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            inputRef.current?.click();
+          }
+        }}
+        tabIndex={0}
+        role="button"
+        aria-label="Upload photo"
+        className={`relative flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-6 text-center cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-1 ${
           dragActive
             ? "border-violet-500 bg-violet-50"
             : value

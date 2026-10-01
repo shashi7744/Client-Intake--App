@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { clientSchema, calculateAge } from "@/lib/schema";
-import { getClients, saveClient, ClientRecord, getAccessRequests } from "@/lib/db";
+import { clientSchema } from "@/lib/schema";
+import { getClients, saveClient, getAccessRequests, getMembers, hasClientProfile } from "@/lib/db";
 import { getCurrentMember } from "@/lib/session";
+import { buildClientRecord } from "@/lib/clientBuilder";
 
 export async function GET() {
   const member = await getCurrentMember();
@@ -11,6 +12,17 @@ export async function GET() {
   const isAdmin = member.role === "admin";
 
   const clients = await getClients();
+
+  // District / taluka heads: attach the submitter's head role to their own
+  // profile record so the UI can show a badge and list them first.
+  const headByEmail = new Map(
+    (await getMembers())
+      .filter((m) => m.headLevel && m.headDistrict)
+      .map((m) => [
+        m.email.toLowerCase(),
+        { level: m.headLevel!, district: m.headDistrict!, taluka: m.headTaluka ?? null },
+      ])
+  );
 
   // Members only see a client's phone number if they registered it
   // themselves or have been granted access by whoever did. Admins see all.
@@ -32,7 +44,8 @@ export async function GET() {
       ? true
       : c.submittedBy.toLowerCase() === member.email.toLowerCase() ||
         approvedClientIds!.has(c.id);
-    return { ...c, contact: canSeeContact ? c.contact : null, contactAccess: canSeeContact };
+    const head = c.isProfile ? headByEmail.get(c.submittedBy.toLowerCase()) ?? null : null;
+    return { ...c, contact: canSeeContact ? c.contact : null, contactAccess: canSeeContact, head };
   });
 
   return NextResponse.json({ status: "success", clients: withMaskedContact });
@@ -54,29 +67,8 @@ export async function POST(req: Request) {
     );
   }
 
-  const data = parsed.data;
-  const dob = `${data.dobYear}-${String(data.dobMonth).padStart(2, "0")}-${String(
-    data.dobDay
-  ).padStart(2, "0")}`;
-
-  const record: ClientRecord = {
-    id: "client-" + Math.random().toString(36).slice(2, 10),
-    name: data.name,
-    gender: data.gender,
-    dob,
-    age: calculateAge(data.dobDay, data.dobMonth, data.dobYear),
-    contact: data.contact,
-    reference: data.reference,
-    post: data.post,
-    address: data.address,
-    state: data.state,
-    district: data.district,
-    taluka: data.taluka,
-    city: data.city,
-    ward: data.ward,
-    submittedBy: member.email,
-    submittedAt: new Date().toISOString(),
-  };
+  // A member's first record is their own profile (see CompleteProfileForm).
+  const record = buildClientRecord(parsed.data, member.email, !(await hasClientProfile(member.email)));
 
   await saveClient(record);
 
