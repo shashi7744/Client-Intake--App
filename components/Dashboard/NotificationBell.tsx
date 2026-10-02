@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Bell, BellRing, Check } from "lucide-react";
+import { Bell, BellRing, Check, X } from "lucide-react";
 
 type Item = {
   id: string;
@@ -177,30 +177,58 @@ export default function NotificationBell({
           setOpen((o) => !o);
           if (!open) load();
         }}
-        className="relative w-9 h-9 flex items-center justify-center rounded-full text-slate-500 hover:bg-gray-100 hover:text-slate-700 transition-colors"
-        aria-label="Notifications"
+        className={`relative w-10 h-10 !p-0 flex items-center justify-center !rounded-full border shadow-sm transition-colors ${
+          unread > 0
+            ? "bg-violet-600 border-violet-600 text-white hover:bg-violet-700"
+            : open
+            ? "bg-violet-100 border-violet-200 text-violet-700"
+            : "bg-violet-50 border-violet-100 text-violet-700 hover:bg-violet-100"
+        }`}
+        aria-label={unread > 0 ? `Notifications, ${unread} unread` : "Notifications"}
       >
-        {unread > 0 ? <BellRing size={18} /> : <Bell size={18} />}
+        {unread > 0 ? (
+          <BellRing size={19} strokeWidth={2.25} className="animate-[bell-ring_1.2s_ease-in-out_2]" />
+        ) : (
+          <Bell size={19} strokeWidth={2.25} fill="currentColor" fillOpacity={0.15} />
+        )}
         {unread > 0 && (
-          <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-semibold flex items-center justify-center">
+          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-white">
             {unread > 9 ? "9+" : unread}
           </span>
         )}
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-[min(92vw,22rem)] bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden animate-fadeIn">
-          <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100">
+        // Tap-to-close backdrop on phones only.
+        <div className="sm:hidden fixed inset-0 z-40 bg-slate-900/30" onClick={() => setOpen(false)} />
+      )}
+
+      {open && (
+        // Phones: a full-width sheet pinned under the header (the bell isn't at
+        // the screen edge, so a right-anchored dropdown would overflow).
+        // Larger screens: a normal dropdown anchored to the bell.
+        <div className="fixed inset-x-3 top-[calc(env(safe-area-inset-top,0px)+4rem)] sm:absolute sm:inset-x-auto sm:top-auto sm:right-0 sm:mt-2 sm:w-[22rem] bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden animate-fadeIn">
+          <div className="flex items-center justify-between gap-2 px-4 py-2.5 border-b border-gray-100">
             <p className="text-sm font-semibold text-slate-900">Notifications</p>
-            {unread > 0 && (
+            <div className="flex items-center gap-1">
+              {unread > 0 && (
+                <button
+                  type="button"
+                  onClick={markAll}
+                  className="flex items-center gap-1 text-xs font-medium text-violet-700 hover:underline !px-2 !py-1"
+                >
+                  <Check size={13} /> Mark all read
+                </button>
+              )}
               <button
                 type="button"
-                onClick={markAll}
-                className="flex items-center gap-1 text-xs font-medium text-violet-700 hover:underline"
+                onClick={() => setOpen(false)}
+                className="sm:hidden !p-1.5 text-slate-400 hover:text-slate-700 hover:bg-gray-100 !rounded-full"
+                aria-label="Close notifications"
               >
-                <Check size={13} /> Mark all read
+                <X size={16} />
               </button>
-            )}
+            </div>
           </div>
 
           {pushState === "default" && (
@@ -228,7 +256,7 @@ export default function NotificationBell({
             </p>
           )}
 
-          <div className="max-h-[60vh] overflow-y-auto divide-y divide-gray-100">
+          <div className="max-h-[calc(100dvh-10rem)] sm:max-h-[60vh] overflow-y-auto overscroll-contain divide-y divide-gray-100">
             {items.length === 0 ? (
               <p className="px-4 py-8 text-center text-sm text-gray-400">No notifications yet.</p>
             ) : (
