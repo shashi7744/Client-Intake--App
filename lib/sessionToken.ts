@@ -1,9 +1,15 @@
 import crypto from "crypto";
 
-const SESSION_SECRET =
-  process.env.SESSION_SECRET ||
-  process.env.VAPID_PRIVATE_KEY ||
-  "client-intake-session-salt-default";
+// No hard-coded default: a default committed to the repo would let anyone
+// sign their own session cookies. Without a secret, logins fail closed.
+const SESSION_SECRET = process.env.SESSION_SECRET || process.env.VAPID_PRIVATE_KEY || "";
+
+function sign(payload: string): string {
+  if (!SESSION_SECRET) {
+    throw new Error("SESSION_SECRET (or VAPID_PRIVATE_KEY) must be set to sign session cookies");
+  }
+  return crypto.createHmac("sha256", SESSION_SECRET).update(payload).digest("hex");
+}
 
 export type SessionType = "member" | "citizen";
 
@@ -14,28 +20,20 @@ export type SessionPayload =
 
 export function createSessionCookie(type: SessionType, email: string): string {
   const payload = `${type}:${email.toLowerCase().trim()}`;
-  const hmac = crypto.createHmac("sha256", SESSION_SECRET).update(payload).digest("hex");
-  return `${payload}.${hmac}`;
+  return `${payload}.${sign(payload)}`;
 }
 
 export function parseSessionString(raw: string | undefined | null): SessionPayload {
-  if (!raw) return null;
+  if (!raw || !SESSION_SECRET) return null;
 
+  // Only signed cookies are accepted - an unsigned "member:<email>" cookie
+  // could be forged by anyone.
   const lastDot = raw.lastIndexOf(".");
-  if (lastDot === -1) {
-    // Legacy fallback during migration
-    if (raw.startsWith("member:")) {
-      return { type: "member", email: raw.slice("member:".length) };
-    }
-    if (raw.startsWith("citizen:")) {
-      return { type: "citizen", email: raw.slice("citizen:".length) };
-    }
-    return null;
-  }
+  if (lastDot === -1) return null;
 
   const payload = raw.slice(0, lastDot);
   const signature = raw.slice(lastDot + 1);
-  const expected = crypto.createHmac("sha256", SESSION_SECRET).update(payload).digest("hex");
+  const expected = sign(payload);
 
   try {
     if (
