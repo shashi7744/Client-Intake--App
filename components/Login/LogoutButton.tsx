@@ -30,12 +30,16 @@ export default function LogoutButton({ redirectTo = "/login" }: { redirectTo?: s
   };
 
   return (
+    // Phones: icon-only round button (same size as the notification bell).
+    // Larger screens: compact outlined button with a label.
     <button
       onClick={logout}
-      className="flex items-center gap-1.5 bg-red-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+      title="Logout"
+      aria-label="Logout"
+      className="flex items-center justify-center gap-1.5 shrink-0 w-10 h-10 !p-0 !rounded-full sm:w-auto sm:h-9 sm:!px-3 sm:!rounded-lg border border-red-200 bg-white text-red-600 text-sm font-medium hover:bg-red-50 hover:border-red-300 transition-colors"
     >
-      <LogOut size={16} />
-      Logout
+      <LogOut size={17} strokeWidth={2.25} />
+      <span className="hidden sm:inline">Logout</span>
     </button>
   );
 }
