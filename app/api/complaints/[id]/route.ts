@@ -5,7 +5,8 @@ import { notifyUser } from "@/lib/notify";
 
 const VALID_STATUSES: ComplaintStatus[] = ["Pending", "In Progress", "Resolved"];
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const member = await getCurrentMember();
   if (!member || member.role !== "admin") {
     return NextResponse.json({ status: "error", message: "Admin access required" }, { status: 403 });

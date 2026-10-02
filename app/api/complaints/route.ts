@@ -15,7 +15,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const email = getCurrentCitizenEmail();
+  const email = await getCurrentCitizenEmail();
   if (!email) {
     return NextResponse.json(
       { status: "error", message: "Please log in with your email to file a complaint" },

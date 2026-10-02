@@ -11,7 +11,7 @@ function getSessionType(req: NextRequest): "member" | "citizen" | null {
   return null;
 }
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const sessionType = getSessionType(req);
   const { pathname } = req.nextUrl;
 

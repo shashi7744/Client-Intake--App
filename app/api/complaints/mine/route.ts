@@ -3,7 +3,7 @@ import { getComplaintsByEmail } from "@/lib/db";
 import { getCurrentCitizenEmail } from "@/lib/session";
 
 export async function GET() {
-  const email = getCurrentCitizenEmail();
+  const email = await getCurrentCitizenEmail();
   if (!email) {
     return NextResponse.json({ status: "error", message: "Not logged in" }, { status: 401 });
   }

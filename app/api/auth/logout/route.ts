@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { deleteCitizenDeviceToken } from "@/lib/db";
 
 export async function POST() {
-  const rawToken = cookies().get("citizen_device")?.value;
+  const rawToken = (await cookies()).get("citizen_device")?.value;
   if (rawToken) {
     await deleteCitizenDeviceToken(rawToken).catch(() => {});
   }

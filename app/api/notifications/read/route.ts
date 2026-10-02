@@ -4,7 +4,7 @@ import { getRecipient } from "@/lib/session";
 
 // POST { id } marks one notification read; POST { all: true } marks all read.
 export async function POST(req: Request) {
-  const who = getRecipient();
+  const who = await getRecipient();
   if (!who) {
     return NextResponse.json({ status: "error", message: "Not logged in" }, { status: 401 });
   }

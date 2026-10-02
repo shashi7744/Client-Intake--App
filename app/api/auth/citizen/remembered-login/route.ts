@@ -7,7 +7,7 @@ import { createSessionCookie } from "@/lib/sessionToken";
 // Identity comes ONLY from the httpOnly citizen_device cookie, verified
 // against a server-side hash. A client-supplied email is never trusted.
 export async function POST() {
-  const rawToken = cookies().get("citizen_device")?.value;
+  const rawToken = (await cookies()).get("citizen_device")?.value;
   const citizen = rawToken ? await verifyCitizenDeviceToken(rawToken) : undefined;
 
   if (!citizen) {

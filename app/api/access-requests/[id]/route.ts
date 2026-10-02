@@ -3,7 +3,8 @@ import { respondToAccessRequest } from "@/lib/db";
 import { getCurrentMember } from "@/lib/session";
 import { notifyUser } from "@/lib/notify";
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const member = await getCurrentMember();
   if (!member) {
     return NextResponse.json({ status: "error", message: "Unauthorized" }, { status: 401 });

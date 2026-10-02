@@ -4,7 +4,7 @@ import { getCurrentCitizenEmail } from "@/lib/session";
 import { findCitizenByEmail } from "@/lib/db";
 
 export default async function CitizenPage() {
-  const email = getCurrentCitizenEmail();
+  const email = await getCurrentCitizenEmail();
   if (!email) {
     redirect("/login?tab=citizen");
   }

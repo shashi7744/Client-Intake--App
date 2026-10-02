@@ -3,7 +3,7 @@ import { getNotifications } from "@/lib/db";
 import { getRecipient } from "@/lib/session";
 
 export async function GET() {
-  const who = getRecipient();
+  const who = await getRecipient();
   if (!who) {
     return NextResponse.json({ status: "error", message: "Not logged in" }, { status: 401 });
   }
