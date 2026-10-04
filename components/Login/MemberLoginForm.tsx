@@ -17,12 +17,25 @@ export default function MemberLoginForm() {
     setMessage("");
     setLoading(true);
 
-    const res = await fetch("/api/auth/member/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-    const data = await res.json();
+    let res: Response;
+    try {
+      res = await fetch("/api/auth/member/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+    } catch {
+      setLoading(false);
+      setMessage("Network error connecting to login service. Please try again.");
+      return;
+    }
+
+    let data: any = {};
+    try {
+      data = await res.json();
+    } catch {
+      data = { message: `Server error (${res.status})` };
+    }
     setLoading(false);
 
     if (res.ok) {

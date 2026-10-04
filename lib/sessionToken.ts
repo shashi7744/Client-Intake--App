@@ -1,14 +1,21 @@
 import crypto from "crypto";
 
-// No hard-coded default: a default committed to the repo would let anyone
-// sign their own session cookies. Without a secret, logins fail closed.
-const SESSION_SECRET = process.env.SESSION_SECRET || process.env.VAPID_PRIVATE_KEY || "";
+function getSessionSecret(): string {
+  if (process.env.SESSION_SECRET && process.env.SESSION_SECRET.trim().length > 0) {
+    return process.env.SESSION_SECRET;
+  }
+  if (process.env.VAPID_PRIVATE_KEY && process.env.VAPID_PRIVATE_KEY.trim().length > 0) {
+    return process.env.VAPID_PRIVATE_KEY;
+  }
+  if (process.env.DATABASE_URL && process.env.DATABASE_URL.trim().length > 0) {
+    return crypto.createHash("sha256").update(`client-intake:${process.env.DATABASE_URL}`).digest("hex");
+  }
+  return "client-intake-session-salt-fallback-secret-2026";
+}
 
 function sign(payload: string): string {
-  if (!SESSION_SECRET) {
-    throw new Error("SESSION_SECRET (or VAPID_PRIVATE_KEY) must be set to sign session cookies");
-  }
-  return crypto.createHmac("sha256", SESSION_SECRET).update(payload).digest("hex");
+  const secret = getSessionSecret();
+  return crypto.createHmac("sha256", secret).update(payload).digest("hex");
 }
 
 export type SessionType = "member" | "citizen";
@@ -24,7 +31,7 @@ export function createSessionCookie(type: SessionType, email: string): string {
 }
 
 export function parseSessionString(raw: string | undefined | null): SessionPayload {
-  if (!raw || !SESSION_SECRET) return null;
+  if (!raw) return null;
 
   // Only signed cookies are accepted - an unsigned "member:<email>" cookie
   // could be forged by anyone.

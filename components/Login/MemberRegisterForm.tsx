@@ -44,12 +44,25 @@ export default function MemberRegisterForm() {
   const sendOtp = async () => {
     setMessage("");
     setLoading(true);
-    const res = await fetch("/api/auth/member/send-register-otp", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
-    });
-    const data = await res.json();
+    let res: Response;
+    try {
+      res = await fetch("/api/auth/member/send-register-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+    } catch {
+      setLoading(false);
+      setMessage("Network error connecting to OTP service.");
+      return;
+    }
+
+    let data: any = {};
+    try {
+      data = await res.json();
+    } catch {
+      data = { message: `Server error (${res.status})` };
+    }
     setLoading(false);
     if (res.ok) {
       setMessage(data.message);
@@ -63,12 +76,25 @@ export default function MemberRegisterForm() {
     e.preventDefault();
     setMessage("");
     setLoading(true);
-    const res = await fetch("/api/auth/member/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, otp, client: methods.getValues() }),
-    });
-    const data = await res.json();
+    let res: Response;
+    try {
+      res = await fetch("/api/auth/member/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, otp, client: methods.getValues() }),
+      });
+    } catch {
+      setLoading(false);
+      setMessage("Network error connecting to registration service.");
+      return;
+    }
+
+    let data: any = {};
+    try {
+      data = await res.json();
+    } catch {
+      data = { message: `Server error (${res.status})` };
+    }
     setLoading(false);
     if (res.ok) {
       router.push("/dashboard");

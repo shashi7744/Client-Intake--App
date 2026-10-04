@@ -177,31 +177,33 @@ export default function ClientsTable() {
                 className="bg-white border border-gray-200 rounded-xl p-3.5 shadow-sm space-y-2.5 animate-fadeInUp"
                 style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}
               >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2.5">
-                    <Avatar name={c.name} size="md" />
-                    <div>
-                      <p className="font-semibold text-slate-900 text-sm leading-tight">{c.name}</p>
+                <div className="flex items-start justify-between gap-2.5">
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <Avatar name={c.name} size="md" className="shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-slate-900 text-sm leading-tight break-words">{c.name}</p>
                       <HeadBadge head={c.head} />
-                      <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
-                        <MapPin size={11} />
-                        {c.city}, Ward {c.ward}
+                      <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5 truncate">
+                        <MapPin size={11} className="shrink-0" />
+                        <span className="truncate">{c.city}, Ward {c.ward}</span>
                       </p>
                     </div>
                   </div>
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 font-medium whitespace-nowrap">
-                    {c.post}
-                  </span>
+                  {c.post && (
+                    <span className="text-xs px-2.5 py-1 rounded-full bg-violet-50 text-violet-700 font-medium break-words text-right max-w-[45%] shrink-0 leading-tight">
+                      {c.post}
+                    </span>
+                  )}
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 bg-slate-50 rounded-lg p-2">
-                  <div>
+                <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 bg-slate-50 rounded-lg p-2.5">
+                  <div className="min-w-0">
                     <span className="text-gray-400 block text-[10px] uppercase">Gender / Age</span>
-                    <span className="font-medium">{c.gender}, {c.age} yrs</span>
+                    <span className="font-medium break-words">{c.gender}, {c.age} yrs</span>
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <span className="text-gray-400 block text-[10px] uppercase">Taluka / District</span>
-                    <span className="font-medium">{c.taluka}, {c.district}</span>
+                    <span className="font-medium break-words">{c.taluka}, {c.district}</span>
                   </div>
                 </div>
 

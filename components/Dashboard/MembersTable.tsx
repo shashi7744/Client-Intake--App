@@ -138,11 +138,11 @@ export default function MembersTable({ currentEmail }: { currentEmail?: string |
               style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}
             >
               <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <Avatar name={m.email} size="md" />
-                  <div className="min-w-0">
+                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                  <Avatar name={m.email} size="md" className="shrink-0" />
+                  <div className="min-w-0 flex-1">
                     <p className="font-semibold text-slate-900 text-sm truncate">{m.email}</p>
-                    {m.phone && <p className="text-xs text-gray-500">{m.phone}</p>}
+                    {m.phone && <p className="text-xs text-gray-500 truncate">{m.phone}</p>}
                   </div>
                 </div>
                 <button
