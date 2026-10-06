@@ -97,6 +97,12 @@ export default function MemberRegisterForm() {
     }
     setLoading(false);
     if (res.ok) {
+      try {
+        localStorage.setItem("member_email", email.trim().toLowerCase());
+        localStorage.setItem("last_portal", "member");
+      } catch {
+        // ignore
+      }
       router.push("/dashboard");
       router.refresh();
     } else {

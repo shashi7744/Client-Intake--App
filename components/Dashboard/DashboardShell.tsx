@@ -82,6 +82,17 @@ export default function DashboardShell({
   const [tableKey, setTableKey] = useState(0);
 
   useEffect(() => {
+    if (email) {
+      try {
+        localStorage.setItem("member_email", email.trim().toLowerCase());
+        localStorage.setItem("last_portal", "member");
+      } catch {
+        // ignore
+      }
+    }
+  }, [email]);
+
+  useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     const s = params.get("section");

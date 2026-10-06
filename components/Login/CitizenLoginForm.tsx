@@ -36,6 +36,8 @@ export default function CitizenLoginForm() {
     try {
       const res = await fetch("/api/auth/citizen/remembered-login", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: rememberedEmail }),
       });
 
       const data = await res.json();
