@@ -30,7 +30,7 @@ async function sendPush(type: RecipientType, emails: string[], p: NotificationPa
     title: p.title,
     body: p.body || "",
     url,
-    tag: p.kind,
+    tag: `${p.kind}-${Date.now()}`,
   });
   await Promise.allSettled(
     subs.map(async (s) => {

@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Client & Complaint Registry",
-    short_name: "Client Registry",
-    description: "Register clients, manage phone access, and track civic complaints across Maharashtra.",
+    name: "Maharashtra Police Boy sanghatna",
+    short_name: "Police Boy Sanghatna",
+    description: "Maharashtra Police Boy sanghatna - Member registration, civic intake, and complaints portal.",
     start_url: "/login",
     display: "standalone",
     background_color: "#f8fafc",

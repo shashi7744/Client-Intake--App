@@ -42,17 +42,17 @@ export async function sendOtpEmail(
 
   try {
     await transporter.sendMail({
-      from: `"Client & Complaint Registry" <${GMAIL_USER}>`,
+      from: `"Maharashtra Police Boy sanghatna" <${GMAIL_USER}>`,
       to: email,
-      subject: "Your verification code",
+      subject: "Your verification code - Maharashtra Police Boy sanghatna",
       html:
         `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;">` +
         `<h2 style="color:#7c3aed;margin-bottom:16px;">Verification Code</h2>` +
-        `<p style="color:#334155;">Your OTP for <strong>Client & Complaint Registry</strong> is:</p>` +
+        `<p style="color:#334155;">Your OTP for <strong>Maharashtra Police Boy sanghatna</strong> is:</p>` +
         `<p style="font-size:32px;font-weight:bold;letter-spacing:6px;color:#7c3aed;margin:24px 0;text-align:center;">${otp}</p>` +
         `<p style="color:#64748b;font-size:14px;">This code is valid for <strong>5 minutes</strong>. If you didn't request this, you can safely ignore this email.</p>` +
         `<hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0;"/>` +
-        `<p style="color:#94a3b8;font-size:12px;text-align:center;">Client & Complaint Registry App</p>` +
+        `<p style="color:#94a3b8;font-size:12px;text-align:center;">Maharashtra Police Boy sanghatna</p>` +
         `</div>`,
     });
 

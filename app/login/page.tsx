@@ -41,9 +41,11 @@ export default function LoginPage() {
       />
 
       <div className="relative w-full max-w-md animate-fadeInUp">
-        <div className="flex items-center justify-center gap-2 mb-6 text-slate-900">
-          <ShieldCheck size={26} className="text-violet-600" />
-          <span className="font-bold text-lg tracking-tight">CLIENT &amp; COMPLAINT REGISTRY</span>
+        <div className="flex items-center justify-center gap-2 mb-6 text-slate-900 text-center">
+          <ShieldCheck size={26} className="text-violet-600 shrink-0" />
+          <span className="font-bold text-base sm:text-lg tracking-tight">
+            MAHARASHTRA POLICE BOY SANGHATNA
+          </span>
         </div>
 
         <div className="bg-white/95 backdrop-blur-sm border border-gray-200 rounded-xl shadow-sm p-6">

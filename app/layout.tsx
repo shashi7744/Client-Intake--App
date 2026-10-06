@@ -3,8 +3,8 @@ import type { Metadata, Viewport } from "next";
 import ServiceWorkerRegister from "@/components/shared/ServiceWorkerRegister";
 
 export const metadata: Metadata = {
-  title: "Client & Complaint Registry",
-  description: "Register clients, manage phone access, and track civic complaints across Maharashtra.",
+  title: "Maharashtra Police Boy sanghatna",
+  description: "Maharashtra Police Boy sanghatna - Member registration, civic intake, and complaints portal.",
   manifest: "/manifest.webmanifest",
   icons: {
     icon: [
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Client Registry",
+    title: "Police Boy Sanghatna",
   },
 };
 

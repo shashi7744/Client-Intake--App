@@ -94,8 +94,10 @@ export default function Sidebar({
         <div className="px-6 py-5 border-b border-slate-800 flex items-center justify-between">
           <div>
             <div className="flex items-center gap-2 text-white">
-              <ShieldCheck size={22} className="text-violet-400" />
-              <span className="font-bold tracking-tight text-lg">CLIENT REGISTRY</span>
+              <ShieldCheck size={22} className="text-violet-400 shrink-0" />
+              <span className="font-bold tracking-tight text-sm leading-tight">
+                MAHARASHTRA POLICE BOY SANGHATNA
+              </span>
             </div>
             <p className="text-[11px] tracking-wider text-slate-500 mt-0.5 uppercase">
               {isAdmin ? "Member Portal · Admin" : "Member Portal"}
@@ -125,7 +127,7 @@ export default function Sidebar({
         </nav>
 
         <div className="px-6 py-4 border-t border-slate-800 text-[11px] text-slate-500">
-          © {new Date().getFullYear()} Client Registry
+          © {new Date().getFullYear()} Maharashtra Police Boy sanghatna
         </div>
       </aside>
     </>

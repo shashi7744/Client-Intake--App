@@ -49,6 +49,7 @@ export default function NotificationBell({
   const [open, setOpen] = useState(false);
   const [pushState, setPushState] = useState<PushState>("off");
   const [busy, setBusy] = useState(false);
+  const [testingAlert, setTestingAlert] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(() => {
@@ -142,6 +143,18 @@ export default function NotificationBell({
       setPushState("off");
     } finally {
       setBusy(false);
+    }
+  };
+
+  const sendTestAlert = async () => {
+    setTestingAlert(true);
+    try {
+      await fetch("/api/push/test", { method: "POST" });
+      setTimeout(load, 1000);
+    } catch {
+      // ignore
+    } finally {
+      setTestingAlert(false);
     }
   };
 
@@ -254,6 +267,22 @@ export default function NotificationBell({
               On iPhone: tap Share, then &quot;Add to Home Screen&quot;, and open the app from there to get phone
               notifications.
             </p>
+          )}
+          {pushState === "on" && (
+            <div className="flex items-center justify-between px-4 py-2 bg-emerald-50 border-b border-emerald-100 text-xs text-emerald-800">
+              <span className="flex items-center gap-1.5 font-medium">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                Phone alerts active
+              </span>
+              <button
+                type="button"
+                disabled={testingAlert}
+                onClick={sendTestAlert}
+                className="text-violet-700 font-semibold hover:underline disabled:opacity-50"
+              >
+                {testingAlert ? "Sending..." : "Send test alert"}
+              </button>
+            </div>
           )}
 
           <div className="max-h-[calc(100dvh-10rem)] sm:max-h-[60vh] overflow-y-auto overscroll-contain divide-y divide-gray-100">

@@ -12,9 +12,11 @@ export default function RegisterPage() {
       />
 
       <div className="relative w-full max-w-sm animate-fadeInUp">
-        <div className="flex items-center justify-center gap-2 mb-6 text-slate-900">
-          <ShieldCheck size={26} className="text-violet-600" />
-          <span className="font-bold text-lg tracking-tight">CLIENT REGISTRY</span>
+        <div className="flex items-center justify-center gap-2 mb-6 text-slate-900 text-center">
+          <ShieldCheck size={26} className="text-violet-600 shrink-0" />
+          <span className="font-bold text-base sm:text-lg tracking-tight">
+            MAHARASHTRA POLICE BOY SANGHATNA
+          </span>
         </div>
         <div className="bg-white/90 backdrop-blur-sm border border-gray-200 rounded-xl shadow-sm p-6">
           <h1 className="text-xl font-semibold mb-1 text-center text-slate-900">

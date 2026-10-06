@@ -85,7 +85,7 @@ export default function MembershipCard() {
       amount: order.amount,
       currency: order.currency,
       order_id: order.order_id,
-      name: "Client & Complaint Registry",
+      name: "Maharashtra Police Boy sanghatna",
       description: "Membership",
       handler: async (response: {
         razorpay_order_id: string;

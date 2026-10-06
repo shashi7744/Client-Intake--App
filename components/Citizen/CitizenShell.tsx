@@ -45,7 +45,7 @@ export default function CitizenShell({
         <div className="flex items-center gap-2 text-slate-900 min-w-0">
           <ShieldCheck size={22} className="text-violet-600 shrink-0" />
           <span className="font-bold tracking-tight text-sm sm:text-base truncate">
-            CLIENT REGISTRY
+            MAHARASHTRA POLICE BOY SANGHATNA
           </span>
         </div>
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">

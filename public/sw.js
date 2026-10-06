@@ -1,4 +1,4 @@
-const CACHE_NAME = "client-registry-v2";
+const CACHE_NAME = "client-registry-v3";
 const STATIC_CACHE_URLS = ["/icons/icon-192.png", "/icons/icon-512.png"];
 
 self.addEventListener("install", (event) => {
@@ -69,17 +69,20 @@ self.addEventListener("push", (event) => {
   try {
     data = event.data ? event.data.json() : {};
   } catch (e) {
-    data = { title: "Client Registry", body: event.data ? event.data.text() : "" };
+    data = { title: "Maharashtra Police Boy sanghatna", body: event.data ? event.data.text() : "" };
   }
-  event.waitUntil(
-    self.registration.showNotification(data.title || "Client Registry", {
-      body: data.body || "",
-      icon: "/icons/icon-192.png",
-      badge: "/icons/icon-192.png",
-      tag: data.tag || undefined,
-      data: { url: data.url || "/" },
-    })
-  );
+  const title = data.title || "Maharashtra Police Boy sanghatna";
+  const options = {
+    body: data.body || "",
+    icon: "/icons/icon-192.png",
+    badge: "/icons/icon-192.png",
+    tag: data.tag || `alert-${Date.now()}`,
+    renotify: true,
+    vibrate: [200, 100, 200, 100, 200],
+    data: { url: data.url || "/" },
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
 });
 
 self.addEventListener("notificationclick", (event) => {
