@@ -37,6 +37,22 @@ function timeAgo(iso: string) {
 
 type PushState = "unsupported" | "ios-install" | "default" | "denied" | "on" | "off";
 
+// Phone pop-ups are a phone feature; on PCs the banner is hidden (desktop
+// browsers like Edge show the permission request as a quiet address-bar icon,
+// which left the button stuck on "Please wait...").
+function isMobileDevice() {
+  return (
+    /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent) ||
+    // iPadOS reports itself as a Mac
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+  );
+}
+
+// Resolves to `fallback` if `promise` hasn't settled within `ms`.
+function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return Promise.race([promise, new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms))]);
+}
+
 // One bell for members, admins and citizens. `onNavigate` receives the
 // notification's `section` so the host screen can open the right page.
 export default function NotificationBell({
@@ -49,7 +65,6 @@ export default function NotificationBell({
   const [open, setOpen] = useState(false);
   const [pushState, setPushState] = useState<PushState>("off");
   const [busy, setBusy] = useState(false);
-  const [testingAlert, setTestingAlert] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(() => {
@@ -98,10 +113,15 @@ export default function NotificationBell({
       const existing = await reg.pushManager.getSubscription();
       const sub =
         existing ||
-        (await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-        }));
+        (await withTimeout(
+          reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+          }),
+          15000,
+          null
+        ));
+      if (!sub) return false;
       const res = await fetch("/api/push/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -116,7 +136,7 @@ export default function NotificationBell({
   // Work out the current push state; if permission was already granted,
   // quietly (re)register this device for the logged-in user.
   useEffect(() => {
-    if (!VAPID_PUBLIC_KEY) return setPushState("unsupported");
+    if (!VAPID_PUBLIC_KEY || !isMobileDevice()) return setPushState("unsupported");
     const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
     const standalone =
       window.matchMedia?.("(display-mode: standalone)").matches ||
@@ -132,7 +152,9 @@ export default function NotificationBell({
   const enablePush = async () => {
     setBusy(true);
     try {
-      const perm = await Notification.requestPermission();
+      // If the browser never answers (e.g. a quiet permission prompt that's
+      // ignored), give up after 20s instead of staying on "Please wait...".
+      const perm = await withTimeout(Notification.requestPermission(), 20000, Notification.permission);
       if (perm === "granted") {
         const ok = await subscribe();
         setPushState(ok ? "on" : "off");
@@ -143,18 +165,6 @@ export default function NotificationBell({
       setPushState("off");
     } finally {
       setBusy(false);
-    }
-  };
-
-  const sendTestAlert = async () => {
-    setTestingAlert(true);
-    try {
-      await fetch("/api/push/test", { method: "POST" });
-      setTimeout(load, 1000);
-    } catch {
-      // ignore
-    } finally {
-      setTestingAlert(false);
     }
   };
 
@@ -269,19 +279,11 @@ export default function NotificationBell({
             </p>
           )}
           {pushState === "on" && (
-            <div className="flex items-center justify-between px-4 py-2 bg-emerald-50 border-b border-emerald-100 text-xs text-emerald-800">
+            <div className="flex items-center px-4 py-2 bg-emerald-50 border-b border-emerald-100 text-xs text-emerald-800">
               <span className="flex items-center gap-1.5 font-medium">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                 Phone alerts active
               </span>
-              <button
-                type="button"
-                disabled={testingAlert}
-                onClick={sendTestAlert}
-                className="text-violet-700 font-semibold hover:underline disabled:opacity-50"
-              >
-                {testingAlert ? "Sending..." : "Send test alert"}
-              </button>
             </div>
           )}
 
