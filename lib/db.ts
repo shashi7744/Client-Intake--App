@@ -1,12 +1,12 @@
 import { neon } from "@neondatabase/serverless";
 import crypto from "crypto";
+import { hashPassword } from "@/lib/password";
 
 // Real database via Neon (serverless Postgres). Every function here is now
 // async - see lib/schema.sql for the table definitions and
 // scripts/migrate.js to create them in your own Neon project.
 //
-// TODO: hash member passwords with bcrypt before going live - they're
-// stored as plain text right now, same as the mock version this replaced.
+// Member passwords are stored hashed (see lib/password.ts).
 
 function getSql() {
   if (!process.env.DATABASE_URL) {
@@ -61,16 +61,24 @@ export async function findMemberByEmail(email: string): Promise<Member | undefin
   return rows[0] ? rowToMember(rows[0]) : undefined;
 }
 
+// `member.password` is the plain password; it is hashed before storing.
 export async function createMember(member: Member): Promise<void> {
   const sql = getSql();
+  const hashed = await hashPassword(member.password);
   await sql`
     INSERT INTO members (email, password, phone, is_paid, role, member_since, created_at)
     VALUES (
-      ${member.email}, ${member.password}, ${member.phone || null},
+      ${member.email}, ${hashed}, ${member.phone || null},
       TRUE, ${member.role || "member"},
       now(), ${member.createdAt}
     )
   `;
+}
+
+export async function setMemberPassword(email: string, password: string): Promise<void> {
+  const sql = getSql();
+  const hashed = await hashPassword(password);
+  await sql`UPDATE members SET password = ${hashed} WHERE lower(email) = lower(${email})`;
 }
 
 export async function setMemberPaid(email: string, isPaid: boolean): Promise<void> {
@@ -162,27 +170,50 @@ export async function setCitizenName(email: string, name: string): Promise<void>
 // 6-digit code, store it with a 5-minute expiry, and check it at verify time.
 
 export function generateOtp(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  return crypto.randomInt(100000, 1000000).toString();
 }
+
+// True if a code was sent to this email within the last `seconds` (resend cooldown).
+export async function otpSentRecently(email: string, seconds: number): Promise<boolean> {
+  const sql = getSql();
+  const rows = await sql`
+    SELECT 1 FROM email_otps
+    WHERE lower(email) = lower(${email}) AND created_at > now() - make_interval(secs => ${seconds})
+    LIMIT 1
+  `;
+  return rows.length > 0;
+}
+
+// Wrong guesses allowed per code before it is thrown away.
+const MAX_OTP_ATTEMPTS = 5;
 
 export async function createEmailOtp(email: string, otp: string): Promise<void> {
   const sql = getSql();
   await sql`
-    INSERT INTO email_otps (email, otp, expires_at, created_at)
-    VALUES (${email.toLowerCase()}, ${otp}, now() + interval '5 minutes', now())
-    ON CONFLICT (email) DO UPDATE SET otp = EXCLUDED.otp, expires_at = EXCLUDED.expires_at, created_at = now()
+    INSERT INTO email_otps (email, otp, expires_at, created_at, attempts)
+    VALUES (${email.toLowerCase()}, ${otp}, now() + interval '5 minutes', now(), 0)
+    ON CONFLICT (email) DO UPDATE
+      SET otp = EXCLUDED.otp, expires_at = EXCLUDED.expires_at, created_at = now(), attempts = 0
   `;
 }
 
 export async function verifyEmailOtp(email: string, otp: string): Promise<boolean> {
   const sql = getSql();
   const normalized = email.toLowerCase();
+  // Count this attempt first, then check - so parallel guesses can't exceed
+  // the limit.
   const rows = await sql`
-    SELECT 1 FROM email_otps
-    WHERE lower(email) = ${normalized} AND otp = ${otp} AND expires_at > now()
-    LIMIT 1
+    UPDATE email_otps SET attempts = attempts + 1
+    WHERE lower(email) = ${normalized} AND expires_at > now()
+    RETURNING otp, attempts
   `;
   if (rows.length === 0) return false;
+  const { otp: expected, attempts } = rows[0] as { otp: string; attempts: number };
+  if (attempts > MAX_OTP_ATTEMPTS) {
+    await sql`DELETE FROM email_otps WHERE lower(email) = ${normalized}`;
+    return false;
+  }
+  if (String(otp) !== expected) return false;
   await sql`DELETE FROM email_otps WHERE lower(email) = ${normalized}`;
   return true;
 }
@@ -515,6 +546,40 @@ export async function deleteCitizenDeviceToken(raw: string): Promise<void> {
   if (!raw) return;
   const sql = getSql();
   await sql`DELETE FROM citizen_devices WHERE token_hash = ${hashToken(raw)}`;
+}
+
+// Same idea for members: issued on password login / registration.
+export async function createMemberDeviceToken(email: string): Promise<string> {
+  const sql = getSql();
+  const raw = crypto.randomBytes(32).toString("hex");
+  await sql`
+    INSERT INTO member_devices (token_hash, member_email)
+    VALUES (${hashToken(raw)}, ${email.toLowerCase()})
+  `;
+  return raw;
+}
+
+export async function verifyMemberDeviceToken(raw: string): Promise<Member | undefined> {
+  if (!raw) return undefined;
+  const sql = getSql();
+  const rows = await sql`
+    SELECT m.* FROM member_devices d
+    JOIN members m ON m.email = d.member_email
+    WHERE d.token_hash = ${hashToken(raw)} LIMIT 1
+  `;
+  return rows[0] ? rowToMember(rows[0]) : undefined;
+}
+
+export async function deleteMemberDeviceToken(raw: string): Promise<void> {
+  if (!raw) return;
+  const sql = getSql();
+  await sql`DELETE FROM member_devices WHERE token_hash = ${hashToken(raw)}`;
+}
+
+// After a password reset, every remembered device must log in again.
+export async function deleteAllMemberDevices(email: string): Promise<void> {
+  const sql = getSql();
+  await sql`DELETE FROM member_devices WHERE lower(member_email) = lower(${email})`;
 }
 
 // ---------- Announcements (posted by admins, shown to all members) ----------

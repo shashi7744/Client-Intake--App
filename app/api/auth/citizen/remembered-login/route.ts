@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { verifyCitizenDeviceToken, findCitizenByEmail, createCitizenDeviceToken } from "@/lib/db";
-import { createSessionCookie } from "@/lib/sessionToken";
+import { verifyCitizenDeviceToken } from "@/lib/db";
+import { setLoginCookies, CITIZEN_DEVICE_COOKIE } from "@/lib/authCookies";
 
 // Restores a citizen session on a device that previously completed OTP.
 // Identity comes ONLY from the httpOnly citizen_device cookie, verified
@@ -9,48 +9,29 @@ import { createSessionCookie } from "@/lib/sessionToken";
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}));
-    const rawToken = (await cookies()).get("citizen_device")?.value;
-    let citizen = rawToken ? await verifyCitizenDeviceToken(rawToken) : undefined;
+    const rawToken = (await cookies()).get(CITIZEN_DEVICE_COOKIE)?.value;
+    const citizen = rawToken ? await verifyCitizenDeviceToken(rawToken) : undefined;
 
-    // Fallback: If device cookie was cleared on logout/browser close, use the verified email from device storage
-    if (!citizen && body?.email) {
-      citizen = await findCitizenByEmail(body.email);
-    }
-
-    if (!citizen) {
+    const shownEmail = typeof body?.email === "string" ? body.email.trim().toLowerCase() : null;
+    if (!citizen || (shownEmail && shownEmail !== citizen.email.toLowerCase())) {
       return NextResponse.json(
-        { status: "error", message: "Account not found. Please verify with OTP." },
+        { status: "error", message: "Please verify your email with OTP." },
         { status: 401 }
       );
     }
 
-    const deviceToken = await createCitizenDeviceToken(citizen.email);
     const response = NextResponse.json({
       status: "success",
       message: "Welcome back",
       email: citizen.email,
       name: citizen.name,
     });
-
-    const isProd = process.env.NODE_ENV === "production";
-    response.cookies.set("session", createSessionCookie("citizen", citizen.email), {
-      httpOnly: true,
-      sameSite: "lax",
-      path: "/",
-      secure: isProd,
-      maxAge: 60 * 60 * 24 * 365,
-    });
-    response.cookies.set("citizen_device", deviceToken, {
-      httpOnly: true,
-      sameSite: "lax",
-      path: "/",
-      secure: isProd,
-      maxAge: 60 * 60 * 24 * 365,
-    });
+    setLoginCookies(response, "citizen", citizen.email);
     return response;
   } catch (err: any) {
+    console.error("Citizen remembered login error:", err);
     return NextResponse.json(
-      { status: "error", message: err?.message || "Internal server error" },
+      { status: "error", message: "Something went wrong. Please try again." },
       { status: 500 }
     );
   }

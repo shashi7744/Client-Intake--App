@@ -72,9 +72,17 @@ export default function AdminClientEntryForm({ onSubmitted }: { onSubmitted?: ()
           <CheckCircle2 size={28} className="text-green-600" />
         </div>
         <p className="text-slate-900 text-lg font-semibold">Client entry created</p>
-        <p className="text-sm text-gray-500 mt-1 mb-6">
-          {email} can now log in with the password you set.
+        <p className="text-sm text-gray-500 mt-1 mb-3">
+          Share these login details with the member:
         </p>
+        <div className="mx-auto mb-6 max-w-sm text-left text-sm bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 space-y-1">
+          <p>
+            <span className="text-gray-500">Email:</span> <span className="font-medium text-slate-900 break-all">{email.trim().toLowerCase()}</span>
+          </p>
+          <p>
+            <span className="text-gray-500">Password:</span> <span className="font-mono font-medium text-slate-900 break-all">{password}</span>
+          </p>
+        </div>
         <button
           type="button"
           onClick={reset}
@@ -110,14 +118,16 @@ export default function AdminClientEntryForm({ onSubmitted }: { onSubmitted?: ()
                 <label className="flex items-center gap-1.5 text-sm font-semibold text-slate-700 mb-1.5">
                   <Mail size={16} className="text-violet-600" /> Member Email
                 </label>
-                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="person@example.com" className="w-full" />
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="person@example.com" className="w-full" autoCapitalize="none" autoCorrect="off" spellCheck={false} />
               </div>
               <div>
                 <label className="flex items-center gap-1.5 text-sm font-semibold text-slate-700 mb-1.5">
                   <Lock size={16} className="text-violet-600" /> Password
                 </label>
-                <input type="text" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 6 characters" className="w-full" autoComplete="off" />
-                <p className="text-xs text-gray-400 mt-1">No OTP needed for admin-created entries. Share this password with the member.</p>
+                {/* Visible on purpose (the admin shares it), but keyboards must not
+                    auto-capitalise/correct it - passwords are case-sensitive. */}
+                <input type="text" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 6 characters" className="w-full font-mono" autoComplete="off" autoCapitalize="none" autoCorrect="off" spellCheck={false} />
+                <p className="text-xs text-gray-400 mt-1">No OTP needed for admin-created entries. Share this password with the member. Capital and small letters matter.</p>
               </div>
             </div>
           )}

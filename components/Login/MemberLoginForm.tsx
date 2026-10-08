@@ -4,14 +4,16 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Mail, Lock, LogIn, CheckCircle2, ArrowRight } from "lucide-react";
+import ForgotPasswordForm from "@/components/Login/ForgotPasswordForm";
 
 export default function MemberLoginForm() {
   const router = useRouter();
-  const [stage, setStage] = useState<"remembered" | "form">("form");
+  const [stage, setStage] = useState<"remembered" | "form" | "forgot">("form");
   const [rememberedEmail, setRememberedEmail] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
+  const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -101,6 +103,22 @@ export default function MemberLoginForm() {
     }
   };
 
+  if (stage === "forgot") {
+    return (
+      <ForgotPasswordForm
+        initialEmail={email}
+        onCancel={() => setStage("form")}
+        onDone={(resetEmail) => {
+          setEmail(resetEmail);
+          setPassword("");
+          setMessage("");
+          setNotice("Password changed. Log in with your new password.");
+          setStage("form");
+        }}
+      />
+    );
+  }
+
   if (stage === "remembered" && rememberedEmail) {
     return (
       <div className="animate-fadeIn">
@@ -166,14 +184,30 @@ export default function MemberLoginForm() {
             onChange={(e) => setEmail(e.target.value)}
             placeholder="member@example.com"
             className="w-full"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
             autoFocus
           />
         </div>
         <div>
-          <label className="flex items-center gap-1.5 text-sm font-semibold text-slate-700 mb-1.5">
-            <Lock size={16} className="text-violet-600" />
-            Password
-          </label>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
+              <Lock size={16} className="text-violet-600" />
+              Password
+            </label>
+            <button
+              type="button"
+              onClick={() => {
+                setMessage("");
+                setNotice("");
+                setStage("forgot");
+              }}
+              className="!p-0 text-xs font-medium text-violet-600 hover:text-violet-800 hover:underline"
+            >
+              Forgot password?
+            </button>
+          </div>
           <input
             type="password"
             value={password}
@@ -182,6 +216,7 @@ export default function MemberLoginForm() {
             className="w-full"
           />
         </div>
+        {notice && <p className="text-green-600 text-sm">{notice}</p>}
         {message && <p className="text-red-500 text-sm">{message}</p>}
         <button
           type="submit"

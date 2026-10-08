@@ -1,14 +1,16 @@
 import { NextResponse } from "next/server";
-import { findMemberByEmail, createMember, saveClient, verifyEmailOtp } from "@/lib/db";
+import { findMemberByEmail, createMember, saveClient, verifyEmailOtp, createMemberDeviceToken } from "@/lib/db";
 import { clientSchema } from "@/lib/schema";
 import { buildClientRecord } from "@/lib/clientBuilder";
 import { notifyAdmins } from "@/lib/notify";
 import { emailConfigured } from "@/lib/email";
-import { createSessionCookie } from "@/lib/sessionToken";
+import { setLoginCookies } from "@/lib/authCookies";
 
 export async function POST(req: Request) {
   try {
-    const { email, password, otp, client } = await req.json().catch(() => ({}));
+    const body = await req.json().catch(() => ({}));
+    const { password, otp, client } = body;
+    const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
 
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return NextResponse.json(
@@ -16,7 +18,7 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
-    if (!password || password.length < 6) {
+    if (typeof password !== "string" || password.length < 6) {
       return NextResponse.json(
         { status: "error", message: "Password must be at least 6 characters" },
         { status: 400 }
@@ -57,7 +59,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // TODO: hash the password with bcrypt before storing, see lib/db.ts
     await createMember({
       email,
       password,
@@ -75,13 +76,7 @@ export async function POST(req: Request) {
     });
 
     const response = NextResponse.json({ status: "success", message: "Account created" });
-    response.cookies.set("session", createSessionCookie("member", email), {
-      httpOnly: true,
-      sameSite: "lax",
-      path: "/",
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 60 * 60 * 24 * 365,
-    });
+    setLoginCookies(response, "member", email, await createMemberDeviceToken(email));
     return response;
   } catch (err: any) {
     console.error("Member register error:", err);

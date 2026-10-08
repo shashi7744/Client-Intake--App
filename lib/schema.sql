@@ -27,6 +27,8 @@ CREATE TABLE IF NOT EXISTS email_otps (
   expires_at  TIMESTAMPTZ NOT NULL,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+-- Wrong guesses so far; the code is discarded after too many.
+ALTER TABLE email_otps ADD COLUMN IF NOT EXISTS attempts INT NOT NULL DEFAULT 0;
 
 CREATE TABLE IF NOT EXISTS clients (
   id            TEXT PRIMARY KEY,
@@ -90,6 +92,14 @@ CREATE TABLE IF NOT EXISTS citizen_devices (
   token_hash     TEXT PRIMARY KEY,
   citizen_email  TEXT NOT NULL REFERENCES citizens(email) ON DELETE CASCADE,
   created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Devices a member has logged in on with their password, for one-tap
+-- "continue as ..." login. Only a hash of the cookie token is stored.
+CREATE TABLE IF NOT EXISTS member_devices (
+  token_hash    TEXT PRIMARY KEY,
+  member_email  TEXT NOT NULL REFERENCES members(email) ON DELETE CASCADE,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_citizen_devices_email ON citizen_devices(citizen_email);
 

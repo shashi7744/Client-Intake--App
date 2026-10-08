@@ -1,14 +1,10 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { deleteCitizenDeviceToken } from "@/lib/db";
 
+// Ends the session. The device cookies (member_device / citizen_device) are
+// kept so the login page can offer one-tap "continue as ..." on this device;
+// logging in as someone else on it replaces them.
 export async function POST() {
-  const rawToken = (await cookies()).get("citizen_device")?.value;
-  if (rawToken) {
-    await deleteCitizenDeviceToken(rawToken).catch(() => {});
-  }
   const response = NextResponse.json({ status: "success" });
   response.cookies.delete("session");
-  response.cookies.delete("citizen_device");
   return response;
 }
