@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Bell, BellRing, Check, X } from "lucide-react";
+import { usePushNotifications } from "@/lib/usePushNotifications";
 
 type Item = {
   id: string;
@@ -14,16 +15,6 @@ type Item = {
 };
 
 const POLL_MS = 30000;
-const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-
-function urlBase64ToUint8Array(base64: string) {
-  const padding = "=".repeat((4 - (base64.length % 4)) % 4);
-  const b64 = (base64 + padding).replace(/-/g, "+").replace(/_/g, "/");
-  const raw = atob(b64);
-  const out = new Uint8Array(raw.length);
-  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
-  return out;
-}
 
 function timeAgo(iso: string) {
   const s = Math.max(1, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
@@ -33,24 +24,6 @@ function timeAgo(iso: string) {
   const h = Math.floor(m / 60);
   if (h < 24) return `${h}h ago`;
   return `${Math.floor(h / 24)}d ago`;
-}
-
-type PushState = "unsupported" | "ios-install" | "default" | "denied" | "on" | "off";
-
-// Phone pop-ups are a phone feature; on PCs the banner is hidden (desktop
-// browsers like Edge show the permission request as a quiet address-bar icon,
-// which left the button stuck on "Please wait...").
-function isMobileDevice() {
-  return (
-    /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent) ||
-    // iPadOS reports itself as a Mac
-    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
-  );
-}
-
-// Resolves to `fallback` if `promise` hasn't settled within `ms`.
-function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
-  return Promise.race([promise, new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms))]);
 }
 
 // One bell for members, admins and citizens. `onNavigate` receives the
@@ -63,8 +36,7 @@ export default function NotificationBell({
   const [items, setItems] = useState<Item[]>([]);
   const [unread, setUnread] = useState(0);
   const [open, setOpen] = useState(false);
-  const [pushState, setPushState] = useState<PushState>("off");
-  const [busy, setBusy] = useState(false);
+  const { state: pushState, busy, enable: enablePush } = usePushNotifications();
   const boxRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(() => {
@@ -98,75 +70,6 @@ export default function NotificationBell({
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
   }, [open]);
-
-  const subscribe = useCallback(async () => {
-    if (!VAPID_PUBLIC_KEY || typeof window === "undefined" || !("serviceWorker" in navigator)) return false;
-    try {
-      const reg =
-        (await Promise.race([
-          navigator.serviceWorker.ready,
-          new Promise<null>((resolve) => setTimeout(() => resolve(null), 4000)),
-        ])) || (await navigator.serviceWorker.getRegistration());
-
-      if (!reg || !reg.pushManager) return false;
-
-      const existing = await reg.pushManager.getSubscription();
-      const sub =
-        existing ||
-        (await withTimeout(
-          reg.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-          }),
-          15000,
-          null
-        ));
-      if (!sub) return false;
-      const res = await fetch("/api/push/subscribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subscription: sub.toJSON() }),
-      });
-      return res.ok;
-    } catch {
-      return false;
-    }
-  }, []);
-
-  // Work out the current push state; if permission was already granted,
-  // quietly (re)register this device for the logged-in user.
-  useEffect(() => {
-    if (!VAPID_PUBLIC_KEY || !isMobileDevice()) return setPushState("unsupported");
-    const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
-    const standalone =
-      window.matchMedia?.("(display-mode: standalone)").matches ||
-      (navigator as any).standalone === true;
-    if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
-      return setPushState(isIos && !standalone ? "ios-install" : "unsupported");
-    }
-    if (Notification.permission === "denied") return setPushState("denied");
-    if (Notification.permission === "default") return setPushState("default");
-    subscribe().then((ok) => setPushState(ok ? "on" : "off"));
-  }, [subscribe]);
-
-  const enablePush = async () => {
-    setBusy(true);
-    try {
-      // If the browser never answers (e.g. a quiet permission prompt that's
-      // ignored), give up after 20s instead of staying on "Please wait...".
-      const perm = await withTimeout(Notification.requestPermission(), 20000, Notification.permission);
-      if (perm === "granted") {
-        const ok = await subscribe();
-        setPushState(ok ? "on" : "off");
-      } else {
-        setPushState(perm === "denied" ? "denied" : "default");
-      }
-    } catch {
-      setPushState("off");
-    } finally {
-      setBusy(false);
-    }
-  };
 
   const markRead = (id: string | null) => {
     fetch("/api/notifications/read", {

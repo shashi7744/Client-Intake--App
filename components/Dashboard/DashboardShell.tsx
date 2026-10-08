@@ -6,6 +6,7 @@ import Sidebar, { Section } from "@/components/Dashboard/Sidebar";
 import Topbar from "@/components/Dashboard/Topbar";
 import SectionHero, { HeroAccent } from "@/components/Dashboard/SectionHero";
 import DashboardOverview from "@/components/Dashboard/DashboardOverview";
+import PushPromptCard from "@/components/shared/PushPromptCard";
 import AdminClientEntryForm from "@/components/Dashboard/AdminClientEntryForm";
 import AnnouncementsAdmin from "@/components/Dashboard/AnnouncementsAdmin";
 import ClientsTable from "@/components/Dashboard/ClientsTable";
@@ -129,6 +130,7 @@ export default function DashboardShell({
         />
 
         <main className="flex-1 px-3 sm:px-6 lg:px-8 py-4 sm:py-8 max-w-6xl w-full mx-auto">
+          <PushPromptCard message="Get notified instantly about new announcements, complaints and requests, even when the app is closed." />
           <div key={section} className="animate-fadeIn">
             <SectionHero
               icon={hero.icon}

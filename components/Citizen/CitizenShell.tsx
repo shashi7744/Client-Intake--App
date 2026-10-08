@@ -6,6 +6,7 @@ import LogoutButton from "@/components/Login/LogoutButton";
 import ComplaintForm from "@/components/Complaints/ComplaintForm";
 import MyComplaints from "@/components/Citizen/MyComplaints";
 import NotificationBell from "@/components/Dashboard/NotificationBell";
+import PushPromptCard from "@/components/shared/PushPromptCard";
 
 type Tab = "file" | "mine";
 
@@ -58,6 +59,7 @@ export default function CitizenShell({
       </header>
 
       <main className="max-w-xl mx-auto px-3 sm:px-4 py-6 sm:py-10">
+        <PushPromptCard message="Get notified when your complaint's status changes, even when the app is closed." />
         <div className="grid grid-cols-2 gap-2 bg-gray-100 rounded-lg p-1 mb-5 sm:mb-6">
           <button
             onClick={() => setTab("file")}
