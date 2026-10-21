@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { ShieldCheck } from "lucide-react";
 import MemberRegisterForm from "@/components/Login/MemberRegisterForm";
 
 export default function RegisterPage() {
@@ -12,8 +11,12 @@ export default function RegisterPage() {
       />
 
       <div className="relative w-full max-w-sm animate-fadeInUp">
-        <div className="flex items-center justify-center gap-2 mb-6 text-slate-900 text-center">
-          <ShieldCheck size={26} className="text-violet-600 shrink-0" />
+        <div className="flex flex-col items-center gap-3 mb-6 text-slate-900 text-center">
+          <img
+            src="/logo.jpg"
+            alt="Maharashtra Police Boys Sanghatna logo"
+            className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-white object-contain p-1 shadow-md ring-1 ring-gray-200"
+          />
           <span className="font-bold text-base sm:text-lg tracking-tight">
             MAHARASHTRA POLICE BOY SANGHATNA
           </span>

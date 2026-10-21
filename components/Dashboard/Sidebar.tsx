@@ -1,6 +1,6 @@
 "use client";
 
-import { UserPlus, Users, ShieldCheck, LayoutGrid, Bell, UserCog, ClipboardList, Megaphone, X } from "lucide-react";
+import { UserPlus, Users, LayoutGrid, Bell, UserCog, ClipboardList, Megaphone, X } from "lucide-react";
 
 export type Section =
   | "overview"
@@ -94,7 +94,11 @@ export default function Sidebar({
         <div className="px-6 py-5 border-b border-slate-800 flex items-center justify-between">
           <div>
             <div className="flex items-center gap-2 text-white">
-              <ShieldCheck size={22} className="text-violet-400 shrink-0" />
+              <img
+                src="/logo.jpg"
+                alt="Logo"
+                className="w-11 h-11 shrink-0 rounded-full bg-white object-contain p-0.5 ring-2 ring-violet-500/40"
+              />
               <span className="font-bold tracking-tight text-sm leading-tight">
                 MAHARASHTRA POLICE BOY SANGHATNA
               </span>

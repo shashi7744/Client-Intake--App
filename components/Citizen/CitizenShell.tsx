@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ShieldCheck, AlertTriangle, ClipboardList } from "lucide-react";
+import { AlertTriangle, ClipboardList } from "lucide-react";
 import LogoutButton from "@/components/Login/LogoutButton";
 import ComplaintForm from "@/components/Complaints/ComplaintForm";
 import MyComplaints from "@/components/Citizen/MyComplaints";
@@ -44,7 +44,11 @@ export default function CitizenShell({
     <div className="min-h-screen bg-slate-50 overflow-x-hidden">
       <header className="flex items-center justify-between px-3 sm:px-6 lg:px-10 py-3 sm:py-4 bg-white border-b border-gray-200 sticky top-0 z-20">
         <div className="flex items-center gap-2 text-slate-900 min-w-0">
-          <ShieldCheck size={22} className="text-violet-600 shrink-0" />
+          <img
+            src="/logo.jpg"
+            alt="Logo"
+            className="w-9 h-9 sm:w-10 sm:h-10 shrink-0 rounded-full bg-white object-contain ring-1 ring-gray-200"
+          />
           <span className="font-bold tracking-tight text-sm sm:text-base truncate">
             MAHARASHTRA POLICE BOY SANGHATNA
           </span>
